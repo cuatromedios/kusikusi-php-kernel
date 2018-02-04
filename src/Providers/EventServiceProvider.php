@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Providers;
+namespace Cuatromedios\Kusikusi\Providers;
 
 use Laravel\Lumen\Providers\EventServiceProvider as ServiceProvider;
 

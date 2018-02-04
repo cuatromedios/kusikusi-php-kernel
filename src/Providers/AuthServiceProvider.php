@@ -1,9 +1,9 @@
 <?php
 
-namespace App\Providers;
+namespace Cuatromedios\Kusikusi\Providers;
 
 use App\Models\Data\User;
-use App\Models\Entity;
+use Cuatromedios\Kusikusi\Models\Entity;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Cuatromedios\Kusikusi\Models\Authtoken;
