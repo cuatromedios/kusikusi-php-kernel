@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 use Ramsey\Uuid\Uuid;
-use App\Models\Medium;
 use Illuminate\Support\Facades\Config;
 
 class Entity extends Model
@@ -56,7 +55,7 @@ class Entity extends Model
      */
     public function contents()
     {
-        return $this->hasMany('App\Models\Content', 'entity_id');
+        return $this->hasMany('Cuatromedios\\Kusikusi\\Models\\Content', 'entity_id');
     }
 
     /**
@@ -68,7 +67,7 @@ class Entity extends Model
         if ($modelClass && count($modelClass::$dataFields) > 0) {
             return $this->hasOne($modelClass);
         } else {
-            return $this->hasOne('App\\Models\\Entity', 'id');
+            return $this->hasOne('Cuatromedios\\Kusikusi\\Models\\Entity', 'id');
         }
     }
     /*
@@ -76,7 +75,7 @@ class Entity extends Model
      */
     public static function getDataClass($modelName) {
         if ($modelName && $modelName != '') {
-            return ("App\\Models\\Data\\".(ucfirst($modelName)));
+            return ("App\\Models\\Entities\\".(ucfirst($modelName)));
         } else {
             return NULL;
         }
@@ -594,8 +593,8 @@ class Entity extends Model
      */
     public function relations()
     {
-        return $this->belongsToMany('App\Models\Entity', 'relations', 'entity_caller_id', 'entity_called_id')
-            ->using('App\Models\Relation')
+        return $this->belongsToMany('Cuatromedios\Kusikusi\Models\Entity', 'relations', 'entity_caller_id', 'entity_called_id')
+            ->using('Cuatromedios\Kusikusi\Models\Relation')
             ->as('relations')
             ->withPivot('kind', 'position', 'tags')
             ->withTimestamps();
@@ -622,7 +621,6 @@ class Entity extends Model
 
             // Contents are sent to another table
             $model = Entity::replaceContent($model);
-            unset($model['contents']);
 
             // Data are sent to specific table
             $model = Entity::replaceData($model);
@@ -752,6 +750,7 @@ class Entity extends Model
                     ];
                     $contentRowValue = ['value' =>  $rowOrFieldValue];
                 }
+                Content::updateOrCreate($contentRowKeys, $contentRowValue);
                 if (!isset($model['name']) && $contentRowKeys['field'] === 'title' && $contentRowKeys['lang'] === $defaultLang) {
                     $model['name'] = $contentRowValue['value'];
                 }

@@ -2,8 +2,9 @@
 
 namespace Cuatromedios\Kusikusi\Providers;
 
-use App\Models\Data\User;
+use App\Models\Entities\User;
 use Cuatromedios\Kusikusi\Models\Entity;
+use Cuatromedios\Kusikusi\Models\Permission;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Cuatromedios\Kusikusi\Models\Authtoken;
@@ -34,7 +35,7 @@ class AuthServiceProvider extends ServiceProvider
 
         Gate::define('get-entity', function ($user, $entity_id) {
             foreach ($user->permissions as $permission) {
-                if ($permission->get && Entity::isSelfOrDescendant($entity_id, $permission->entity_id)) {
+                if ($permission->get === Permission::ANY && Entity::isSelfOrDescendant($entity_id, $permission->entity_id)) {
                    return true;
                 }
             }
@@ -73,8 +74,8 @@ class AuthServiceProvider extends ServiceProvider
                     $query->where('token', '=', $key);
                 })->first();
                 if(!empty($user)){
-                    $request->request->add(['user_id' => $user->entity_id]);
-                    $request->request->add(['user_profile' => $user->profile]);
+                    // $request->request->add(['user_id' => $user->entity_id]);
+                    // $request->request->add(['user_profile' => $user->profile]);
                 }
                 return $user;
             } else {

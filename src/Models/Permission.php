@@ -7,6 +7,10 @@ use Illuminate\Database\Eloquent\Model;
 class Permission extends Model
 {
 
+    const NONE = 'none';
+    const OWN = 'own';
+    const ANY = 'any';
+
     /**
      * The table associated with the model.
      *
