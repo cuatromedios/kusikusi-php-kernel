@@ -1,0 +1,32 @@
+{
+    "name": "cuatromedios/kusikusi-php-kernel",
+    "description": "The KusiKusi PHP Kernel.",
+    "homepage": "https://github.com/cuatromedios/kusikusi-php-kernel",
+    "keywords": ["framework", "kusikusi", "cuatromedios", "laravel", "lumen"],
+    "license": "MIT",
+    "type": "project",
+    "require": {
+        "php": ">=7.0",
+        "laravel/lumen-framework": "5.5.*",
+        "ramsey/uuid": "^3.7"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "~6.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Cuatromedios\\Kusikusi\\": "src/"
+        }
+    },
+    "autoload-dev": {
+
+    },
+    "scripts": {
+
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "config": {
+        "optimize-autoloader": true
+    }
+}
