@@ -7,12 +7,19 @@ use Illuminate\Http\Response;
 class ApiResponse
 {
 
+    const TEXT_BADREQUEST = 'Bad Request';
     const TEXT_UNAUTHORIZED = 'Unauthorized';
-    const TEXT_UNAUTHENTICATED = 'Unauthenticated';
-    const TEXT_NOTFOUND = 'Not found';
-    const STATUS_UNAUTHORIZED = 403;
-    const STATUS_UNAUTHENTICATED = 401;
+    const TEXT_FORBIDDEN = 'Forbidden';
+    const TEXT_NOTFOUND = 'Not Found';
+    const TEXT_METHODNOTALLOWED = 'Method Not Allowed';
+    const TEXT_INTERNALERROR = 'Internar Server Error';
+
+    const STATUS_BADREQUEST = 400;
+    const STATUS_UNAUTHORIZED = 401;
+    const STATUS_FORBIDDEN = 403;
     const STATUS_NOTFOUND = 404;
+    const STATUS_METHODNOTALLOWED = 404;
+    const STATUS_INTERNALERROR = 500;
 
     private $_data;
     private $_success;

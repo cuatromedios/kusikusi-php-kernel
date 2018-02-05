@@ -37,10 +37,11 @@ class EntityController extends Controller
             if (Gate::allows('get-entity', $id)) {
                 return (new ApiResponse($entity, TRUE))->response();
             } else {
-                return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_UNAUTHORIZED, ApiResponse::STATUS_UNAUTHORIZED))->response();
+                return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
             }
         } catch (\Exception $e) {
-            return (new ApiResponse(NULL, FALSE, ExceptionDetails::filter($e), ApiResponse::STATUS_NOTFOUND))->response();
+            $exceptionDetails = ExceptionDetails::filter($e);
+            return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
         }
     }
 
@@ -54,11 +55,15 @@ class EntityController extends Controller
     {
         try {
             // TODO: Filter the json to delete al not used data
-            $id = Entity::post($request->json()->all());
-            return (new ApiResponse($id, TRUE))->response();
+            if (Gate::allows('post-entity', $request->parent) === true) {
+                $entityPostedId = Entity::post($request->json()->all());
+                return (new ApiResponse($entityPostedId, TRUE))->response();
+            } else {
+                return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+            }
         } catch (\Exception $e) {
-            $status = 400;
-            return (new ApiResponse(NULL, FALSE, ExceptionDetails::filter($e), $status))->response();
+            $exceptionDetails = ExceptionDetails::filter($e);
+            return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
         }
     }
 
@@ -71,13 +76,16 @@ class EntityController extends Controller
     public function patch($id, Request $request)
     {
         try {
-            // TODO: Filter the json to delete al not used data
-            $id = Entity::patch($id, $request->json()->all());
-            return (new ApiResponse($id, TRUE))->response();
-
+            // TODO: Filter the json to delete all not used data
+            if (Gate::allows('patch-entity', $id) === true) {
+                $entityPatchedId = Entity::patch($id, $request->json()->all());
+                return (new ApiResponse($entityPatchedId, TRUE))->response();
+            } else {
+                return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+            }
         } catch (\Exception $e) {
-            $status = 400;
-            return (new ApiResponse(NULL, FALSE, ExceptionDetails::filter($e), $status))->response();
+            $exceptionDetails = ExceptionDetails::filter($e);
+            return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
         }
     }
 
@@ -93,13 +101,14 @@ class EntityController extends Controller
             $lang = $request->input('lang', Config::get('general.langs')[0]);
             $fields = $request->input('fields', []);
             $entity = Entity::getParent($id, $fields, $lang);
-            if (!$entity instanceof Entity) {
-                return $this->sendNotFoundResponse("The entity with id {$id} doesn't exist");
+            if (Gate::allows('get-entity', $id)) {
+                return (new ApiResponse($entity, TRUE))->response();
+            } else {
+                return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
             }
-            return (new ApiResponse($entity, TRUE))->response();
         } catch (\Exception $e) {
-            $status = 404;
-            return (new ApiResponse(NULL, FALSE, ExceptionDetails::filter($e), $status))->response();
+            $exceptionDetails = ExceptionDetails::filter($e);
+            return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
         }
     }
 
@@ -115,11 +124,15 @@ class EntityController extends Controller
             $fields = $request->input('fields', []);
             $lang = $request->input('lang', Config::get('general.langs')[0]);
             $order = $request->input('order', NULL);
-            $collection = Entity::get(NULL, $fields, $lang, $order);
-            return (new ApiResponse($collection, TRUE))->response();
+            if (Gate::allows('get-all')) {
+                $collection = Entity::get(NULL, $fields, $lang, $order);
+                return (new ApiResponse($collection, TRUE))->response();
+            } else {
+                return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+            }
         } catch (\Exception $e) {
-            $status = 500;
-            return (new ApiResponse(NULL, FALSE, ExceptionDetails::filter($e), $status))->response();
+            $exceptionDetails = ExceptionDetails::filter($e);
+            return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
         }
     }
 
@@ -132,18 +145,18 @@ class EntityController extends Controller
     public function getChildren($id, Request $request)
     {
         try {
+            $fields = $request->input('fields', []);
+            $lang = $request->input('lang', Config::get('general.langs')[0]);
+            $order = $request->input('order', NULL);
             if (Gate::allows('get-entity', $id)) {
-                $fields = $request->input('fields', []);
-                $lang = $request->input('lang', Config::get('general.langs')[0]);
-                $order = $request->input('order', NULL);
                 $collection = Entity::getChildren($id, $fields, $lang, $order);
                 return (new ApiResponse($collection, TRUE))->response();
             } else {
-                return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_UNAUTHORIZED, ApiResponse::STATUS_UNAUTHORIZED))->response();
+                return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
             }
         } catch (\Exception $e) {
-            $status = 500;
-            return (new ApiResponse(NULL, FALSE, ExceptionDetails::filter($e), $status))->response();
+            $exceptionDetails = ExceptionDetails::filter($e);
+            return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
         }
     }
 
@@ -159,11 +172,15 @@ class EntityController extends Controller
             $fields = $request->input('fields', []);
             $lang = $request->input('lang', Config::get('general.langs')[0]);
             $order = $request->input('order', NULL);
-            $collection = Entity::getAncestors($id, $fields, $lang, $order);
-            return (new ApiResponse($collection, TRUE))->response();
+            if (Gate::allows('get-entity', $id)) {
+                $collection = Entity::getAncestors($id, $fields, $lang, $order);
+                return (new ApiResponse($collection, TRUE))->response();
+            } else {
+                return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+            }
         } catch (\Exception $e) {
-            $status = 500;
-            return (new ApiResponse(NULL, FALSE, ExceptionDetails::filter($e), $status))->response();
+            $exceptionDetails = ExceptionDetails::filter($e);
+            return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
         }
     }
 
@@ -179,11 +196,15 @@ class EntityController extends Controller
             $fields = $request->input('fields', []);
             $lang = $request->input('lang', Config::get('general.langs')[0]);
             $order = $request->input('order', NULL);
-            $collection = Entity::getDescendants($id, $fields, $lang, $order);
-            return (new ApiResponse($collection, TRUE))->response();
+            if (Gate::allows('get-entity', $id)) {
+                $collection = Entity::getDescendants($id, $fields, $lang, $order);
+                return (new ApiResponse($collection, TRUE))->response();
+            } else {
+                return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+            }
         } catch (\Exception $e) {
-            $status = 500;
-            return (new ApiResponse(NULL, FALSE, ExceptionDetails::filter($e), $status))->response();
+            $exceptionDetails = ExceptionDetails::filter($e);
+            return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
         }
     }
 
@@ -199,11 +220,15 @@ class EntityController extends Controller
             $fields = $request->input('fields', []);
             $lang = $request->input('lang', Config::get('general.langs')[0]);
             $order = $request->input('order', NULL);
-            $collection = Entity::getEntityRelations($id, $kind, $fields, $lang, $order);
-            return (new ApiResponse($collection, TRUE))->response();
+            if (Gate::allows('get-entity', $id)) {
+                $collection = Entity::getEntityRelations($id, $kind, $fields, $lang, $order);
+                return (new ApiResponse($collection, TRUE))->response();
+            } else {
+                return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+            }
         } catch (\Exception $e) {
-            $status = 500;
-            return (new ApiResponse(NULL, FALSE, ExceptionDetails::filter($e), $status))->response();
+            $exceptionDetails = ExceptionDetails::filter($e);
+            return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
         }
     }
     /**
@@ -218,11 +243,15 @@ class EntityController extends Controller
             $fields = $request->input('fields', []);
             $lang = $request->input('lang', Config::get('general.langs')[0]);
             $order = $request->input('order', NULL);
-            $collection = Entity::getInverseEntityRelations($id, $kind, $fields, $lang, $order);
-            return (new ApiResponse($collection, TRUE))->response();
+            if (Gate::allows('get-entity', $id)) {
+                $collection = Entity::getInverseEntityRelations($id, $kind, $fields, $lang, $order);
+                return (new ApiResponse($collection, TRUE))->response();
+            } else {
+                return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+            }
         } catch (\Exception $e) {
-            $status = 500;
-            return (new ApiResponse(NULL, FALSE, ExceptionDetails::filter($e), $status))->response();
+            $exceptionDetails = ExceptionDetails::filter($e);
+            return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
         }
     }
 }

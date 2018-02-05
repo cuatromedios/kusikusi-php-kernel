@@ -229,7 +229,7 @@ class Entity extends Model
      */
     public static function getParent($id, $fields = [], $lang = NULL)
     {
-        $entity = Entity::find($id);
+        $entity = Entity::getOne($id);
         $parent = Entity::getOne($entity->parent, $fields , $lang);
 
         return $parent;
@@ -619,6 +619,13 @@ class Entity extends Model
                 $model = $modelClass::beforeSave($model);
             }
 
+            // Use the user authenticated
+            if (isset($model['user_id'])) {
+                $model['updated_by'] = $model['user_id'];
+            }
+            unset($model['user_id']);
+            unset($model['user_profile']);
+
             // Contents are sent to another table
             $model = Entity::replaceContent($model);
 
@@ -679,6 +686,14 @@ class Entity extends Model
             if (method_exists($modelClass, 'beforeSave')) {
                 $model = $modelClass::beforeSave($model);
             }
+
+            // Use the user authenticated
+            if (isset($model['user_id'])) {
+                $model['created_by'] = $model['user_id'];
+                $model['updated_by'] = $model['user_id'];
+            }
+            unset($model['user_id']);
+            unset($model['user_profile']);
 
             // Contents are sent to another table
             $model = Entity::replaceContent($model);
