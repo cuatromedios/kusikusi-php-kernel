@@ -612,12 +612,8 @@ class Entity extends Model
 
         self::updating(function($model) {
             // TODO: Dont allow to change the model?
-
             // Preprocess the model data if the data class has a method defined for that. (Data models does not extend Entity)
             $modelClass =  Entity::getDataClass($model['model']);
-            if (method_exists($modelClass, 'beforeSave')) {
-                $model = $modelClass::beforeSave($model);
-            }
 
             // Use the user authenticated
             if (isset($model['user_id'])) {
@@ -631,6 +627,10 @@ class Entity extends Model
 
             // Data are sent to specific table
             $model = Entity::replaceData($model);
+
+            if (method_exists($modelClass, 'beforeSave')) {
+                $model = $modelClass::beforeSave($model);
+            }
 
             // TODO: Allow recreation of the tree when updating (now just disallow the change of the parent)
             unset($model['parent']);
@@ -683,9 +683,6 @@ class Entity extends Model
 
             // Preprocess the model data if the data class has a method defined for that. (Data models does not extend Entity)
             $modelClass =  Entity::getDataClass($model['model']);
-            if (method_exists($modelClass, 'beforeSave')) {
-                $model = $modelClass::beforeSave($model);
-            }
 
             // Use the user authenticated
             if (isset($model['user_id'])) {
@@ -700,6 +697,10 @@ class Entity extends Model
 
             // Data are sent to specific table
             $model = Entity::replaceData($model);
+
+            if (method_exists($modelClass, 'beforeSave')) {
+                $model = $modelClass::beforeSave($model);
+            }
 
         });
 
@@ -765,8 +766,8 @@ class Entity extends Model
                     ];
                     $contentRowValue = ['value' =>  $rowOrFieldValue];
                 }
-                Content::updateOrCreate($contentRowKeys, $contentRowValue);
-                if (!isset($model['name']) && $contentRowKeys['field'] === 'title' && $contentRowKeys['lang'] === $defaultLang) {
+                Content::where($contentRowKeys)->update($contentRowValue);
+                if ($contentRowKeys['field'] === 'title' && $contentRowKeys['lang'] === $defaultLang) {
                     $model['name'] = $contentRowValue['value'];
                 }
             };
@@ -776,7 +777,7 @@ class Entity extends Model
     }
     public static function replaceData($model) {
         $modelClass =  Entity::getDataClass($model['model']);
-        if (isset($model['data'])) {
+        if (count($modelClass::$dataFields) > 0 && isset($model['data'])) {
             $dataToInsert = ['entity_id' => $model['id']];
             foreach ($modelClass::$dataFields as $field) {
                 if (isset($model['data'][$field])) {
