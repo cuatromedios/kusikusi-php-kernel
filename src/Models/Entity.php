@@ -75,7 +75,7 @@ class Entity extends Model
      */
     public static function getDataClass($modelName) {
         if ($modelName && $modelName != '') {
-            return ("App\\Models\\Entities\\".(ucfirst($modelName)));
+            return ("App\\Models\\".(ucfirst($modelName)));
         } else {
             return NULL;
         }

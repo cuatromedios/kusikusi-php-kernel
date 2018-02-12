@@ -2,7 +2,7 @@
 
 namespace Cuatromedios\Kusikusi\Providers;
 
-use App\Models\Entities\User;
+use App\Models\User;
 use Cuatromedios\Kusikusi\Models\Entity;
 use Cuatromedios\Kusikusi\Models\Permission;
 use Illuminate\Support\Facades\Gate;
@@ -28,10 +28,6 @@ class AuthServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-        // Here you may define how you wish users to be authenticated for your Lumen
-        // application. The callback which receives the incoming request instance
-        // should return either a User instance or null. You're free to obtain
-        // the User instance via an API token or any other method necessary.
 
         Gate::define('get-entity', function ($user, $entity_id) {
             $entity = Entity::where("id", $entity_id)->firstOrFail();
@@ -81,6 +77,11 @@ class AuthServiceProvider extends ServiceProvider
             }
             return false;
         });
+
+        // Here you may define how you wish users to be authenticated for your Lumen
+        // application. The callback which receives the incoming request instance
+        // should return either a User instance or null. You're free to obtain
+        // the User instance via an API token or any other method necessary.
 
         $this->app['auth']->viaRequest('api', function ($request) {
             if ($request->header(Authtoken::AUTHORIZATION_HEADER)) {

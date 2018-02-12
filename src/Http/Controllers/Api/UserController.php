@@ -6,7 +6,7 @@ use Cuatromedios\Kusikusi\Http\Controllers\Controller;
 use Cuatromedios\Kusikusi\Models\Http\ApiResponse;
 use Cuatromedios\Kusikusi\Exceptions\ExceptionDetails;
 use Illuminate\Http\Request;
-use App\Models\Entities\User;
+use App\Models\User;
 
 class UserController extends Controller
 {
