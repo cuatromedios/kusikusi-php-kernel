@@ -90,6 +90,52 @@ class EntityController extends Controller
     }
 
     /**
+     * hola
+     * Makes a soft delete on the specified entity.
+     *
+     * @param $id
+     * @return \Illuminate\Http\Response
+     */
+
+    public function softDelete($id)
+    {
+        try {
+            if (Gate::allows('delete-entity', $id) === true) {
+                $entitySoftDeletedId = Entity::softDelete($id);
+                return (new ApiResponse($entitySoftDeletedId, TRUE))->response();
+            } else {
+                return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+            }
+        } catch (\Exception $e) {
+            $exceptionDetails = ExceptionDetails::filter($e);
+            return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
+        }
+    }
+
+    /**
+     * Makes a hard deletes on the specified entity.
+     *
+     * @param $id
+     * @return \Illuminate\Http\Response
+     */
+
+    public function hardDelete($id)
+    {
+        try {
+            if (Gate::allows('delete-entity', $id) === true) {
+                $entityHardDeletedId = Entity::hardDelete($id);
+                return (new ApiResponse($entityHardDeletedId, TRUE))->response();
+            } else {
+                return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+            }
+        } catch (\Exception $e) {
+            $exceptionDetails = ExceptionDetails::filter($e);
+            return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
+        }
+    }
+
+
+    /**
      * Display entity's parent.
      *
      * @param $id
