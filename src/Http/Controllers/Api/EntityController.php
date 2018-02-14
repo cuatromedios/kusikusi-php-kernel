@@ -90,7 +90,7 @@ class EntityController extends Controller
     }
 
     /**
-     * hola
+     *
      * Makes a soft delete on the specified entity.
      *
      * @param $id

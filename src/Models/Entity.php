@@ -44,6 +44,13 @@ class Entity extends Model
     ];
 
     /**
+     * The model should use soft deletes.
+     *
+     * @var array
+     */
+    use SoftDeletes;
+
+    /**
      * Indicates  the model should be timestamped.
      *
      * @var bool
@@ -220,6 +227,42 @@ class Entity extends Model
         $entity->update($information);
         return $entity['id'];
     }
+
+    /**
+     * Soft deletes an entity.
+     *
+     * @param $id
+     * @return \Illuminate\Http\JsonResponse|string
+     */
+
+    public static function softDelete($id)
+    {
+        $entity = Entity::destroy($id);
+        return $entity['id'];
+    }
+
+    /**
+     * Hard deletes an entity.
+     *
+     * @param $id
+     * @return \Illuminate\Http\JsonResponse|string
+     */
+
+    public static function hardDelete($id)
+    {
+        $entity = Entity::where("id", $id)->firstOrFail();
+        $modelClass =  Entity::getDataClass($entity['model']);
+//        var_dump($modelClass);
+//        die();
+        if (count($modelClass::$dataFields) > 0 && isset($entity['data'])) {
+            $modelClass::destroy($id);
+            $entity->forceDelete();
+        } else {
+            $entity->forceDelete();
+        }
+        return $entity['id'];
+    }
+
 
     /**
      * Returns an entity's parent.
