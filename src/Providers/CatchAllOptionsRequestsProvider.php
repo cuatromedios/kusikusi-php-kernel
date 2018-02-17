@@ -1,5 +1,9 @@
-<?php namespace App\Providers;
+<?php
+
+namespace  Cuatromedios\Kusikusi\Providers;
+
 use Illuminate\Support\ServiceProvider;
+
 /**
  * If the incoming request is an OPTIONS request
  * we will register a handler for the requested route
