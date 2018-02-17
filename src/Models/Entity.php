@@ -750,41 +750,46 @@ class Entity extends Model
 
 
 
-        self::saved(function(Entity $model) {
+        self::saved(function(Entity $entity) {
             // Create the ancestors relations
-            if (isset($model['parent']) && $model['parent'] != '') {
-                $parentEntity = Entity::find($model['parent']);
-                $model->relations()->attach($parentEntity['id'], ['kind' => 'ancestor', 'depth' => 0]);
+            if (isset($entity['parent']) && $entity['parent'] != '') {
+                $parentEntity = Entity::find($entity['parent']);
+                $entity->relations()->attach($parentEntity['id'], ['kind' => 'ancestor', 'depth' => 0]);
                 $ancestors = ($parentEntity->relations()->where('kind', 'ancestor')->orderBy('depth'))->get();
                 for ($a = 0; $a < count($ancestors); $a++) {
-                    $model->relations()->attach($ancestors[$a]['id'], ['kind' => 'ancestor', 'depth' => ($a + 1)]);
+                    $entity->relations()->attach($ancestors[$a]['id'], ['kind' => 'ancestor', 'depth' => ($a + 1)]);
                 }
             };
 
             // Now, update the versions
             // First the own entity version and own full version
-            DB::statement(sprintf('update entities set entity_version = entity_version + 1, full_version = full_version + 1 where id = "%s"', $model['id']));
+            // TODO: Stop the incrementing of the entity_version when the root creates the table
+            DB::table('entities')->where('id', $entity['id'])
+                ->increment('entity_version');
+            DB::table('entities')->where('id', $entity['id'])
+                ->increment('full_version');
             // Then the three version (and full version), using its ancestors
-            $ancestors = self::getAncestors($model['id'], ['e.id'])->flatten();
-            $ancestorsWithQuotes = [];
-            foreach ($ancestors as $ancestor) {$ancestorsWithQuotes[] = '"'. $ancestor.'"';}
-            if (!empty($ancestorsWithQuotes)) {
-                DB::statement(sprintf('update entities set tree_version = tree_version + 1, full_version = full_version + 1 where id in (%s)', implode(',', $ancestorsWithQuotes)));
+            $ancestors = self::getAncestors($entity['id'], ['e.id']);
+            if (!empty($ancestors)) {
+                DB::table('entities')->whereIn('id', $ancestors)
+                    ->increment('tree_version');
+                DB::table('entities')->whereIn('id', $ancestors)
+                    ->increment('full_version');
             }
             // Now the relation version, this is, will update relations_version of entitites calling this, and also the full_Version field of its ancestors
-            $relateds = self::getInverseEntityRelations($model['id'], NULL, ['e.id'])->flatten();
-            $relatedWithQuotes = [];
+            $relateds = self::getInverseEntityRelations($entity['id'], NULL, ['e.id']);
             foreach ($relateds as $related) {
-                $relatedWithQuotes[] = '"'. $related.'"';
-                $ancestors = self::getAncestors($related, ['e.id'])->flatten();
-                $ancestorsWithQuotes = [];
-                foreach ($ancestors as $ancestor) {$ancestorsWithQuotes[] = '"'. $ancestor.'"';}
-                if (!empty($ancestorsWithQuotes)) {
-                    DB::statement(sprintf('update entities set tree_version = tree_version + 1, full_version = full_version + 1 where id in (%s)', implode(',', $ancestorsWithQuotes)));
+                $ancestors = self::getAncestors($related, ['e.id']);
+                if (!empty($ancestors)) {
+                    DB::table('entities')->whereIn('id', $ancestors)
+                        ->increment('tree_version');
+                    DB::table('entities')->whereIn('id', $ancestors)
+                        ->increment('full_version');
                 }
             }
-            if (!empty($relatedWithQuotes)) {
-                DB::statement(sprintf('update entities set relations_version = relations_version + 1 where id in (%s)', implode(',', $relatedWithQuotes)));
+            if (!empty($relateds)) {
+                DB::table('entities')->whereIn('id', $relateds)
+                    ->increment('relations_version');
             }
         });
     }
