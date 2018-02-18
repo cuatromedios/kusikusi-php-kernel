@@ -2,6 +2,7 @@
 
 namespace Cuatromedios\Kusikusi\Models;
 
+use Cuatromedios\Kusikusi\Models\Http\ApiResponse;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -719,8 +720,9 @@ class Entity extends Model
             }
 
             // Auto populate the model field
+            // TODO: This error does not get caught in the Controller and is not friendly reported to the user
             if (!isset($model['model'])) {
-                throw new \Error('A model name is requiered');
+                throw new \Error('A model name is requiered', ApiResponse::STATUS_BADREQUEST);
             }
 
             //TODO: Check if the parent allows this model as a children
@@ -735,6 +737,9 @@ class Entity extends Model
             }
             unset($model['user_id']);
             unset($model['user_profile']);
+
+            // Delete relations if they come
+            unset($model['relations']);
 
             // Contents are sent to another table
             $model = Entity::replaceContent($model);
@@ -822,12 +827,12 @@ class Entity extends Model
                 $param_id =  filter_var($contentRowKeys['entity_id'], FILTER_SANITIZE_STRING);
                 $param_field =  filter_var($contentRowKeys['field'], FILTER_SANITIZE_STRING);
                 $param_lang =  filter_var($contentRowKeys['lang'], FILTER_SANITIZE_STRING);
-                $param_value =  filter_var($contentRowValue['value'], FILTER_SANITIZE_STRING);
+                $param_value =  ($contentRowValue['value']);
                 $query = sprintf('REPLACE INTO contents set value = "%s", entity_id="%s", field = "%s", lang = "%s"', $param_value, $param_id, $param_field, $param_lang);
                 DB::insert($query);
 
                 if ($contentRowKeys['field'] === 'title' && $contentRowKeys['lang'] === $defaultLang) {
-                    $model['name'] = $contentRowValue['value'];
+                    $model['name'] = filter_var($contentRowValue['value'], FILTER_SANITIZE_STRING);
                 }
             };
         };

@@ -10,7 +10,6 @@ class ExceptionDetails
 {
     public static function filter(\Exception $e) {
         $result = ["info" => []];
-        //print(get_class($e));
         switch (get_class($e)) {
             case "Illuminate\Database\QueryException":
                 $result["info"]["code"] = ApiResponse::STATUS_BADREQUEST;
