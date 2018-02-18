@@ -815,7 +815,16 @@ class Entity extends Model
                     ];
                     $contentRowValue = ['value' =>  $rowOrFieldValue];
                 }
-                Content::updateOrCreate($contentRowKeys, $contentRowValue);
+                // Content::updateOrCreate($contentRowKeys, $contentRowValue)->where($contentRowKeys);
+                // Content::where($contentRowKeys)->updateOrCreate($contentRowKeys, $contentRowValue);
+                // TODO: Is there a better way to do this? updateOrCreate doesn't suppor multiple keys
+                // TODO: Sanitize this but allow html content
+                $param_id =  filter_var($contentRowKeys['entity_id'], FILTER_SANITIZE_STRING);
+                $param_field =  filter_var($contentRowKeys['field'], FILTER_SANITIZE_STRING);
+                $param_lang =  filter_var($contentRowKeys['lang'], FILTER_SANITIZE_STRING);
+                $param_value =  filter_var($contentRowValue['value'], FILTER_SANITIZE_STRING);
+                $query = sprintf('REPLACE INTO contents set value = "%s", entity_id="%s", field = "%s", lang = "%s"', $param_value, $param_id, $param_field, $param_lang);
+                DB::insert($query);
 
                 if ($contentRowKeys['field'] === 'title' && $contentRowKeys['lang'] === $defaultLang) {
                     $model['name'] = $contentRowValue['value'];
