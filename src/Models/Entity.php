@@ -815,7 +815,8 @@ class Entity extends Model
                     ];
                     $contentRowValue = ['value' =>  $rowOrFieldValue];
                 }
-                Content::where($contentRowKeys)->update($contentRowValue);
+                Content::updateOrCreate($contentRowKeys, $contentRowValue);
+
                 if ($contentRowKeys['field'] === 'title' && $contentRowKeys['lang'] === $defaultLang) {
                     $model['name'] = $contentRowValue['value'];
                 }
