@@ -25,7 +25,7 @@ class WebController extends Controller
      * @param $request \Illuminate\Http\Request
      * @return \Illuminate\Http\Response
      */
-    public function catch(Request $request)
+    public function any(Request $request)
     {
         $query = ($request->query());
         $url = $request->path() == '/' ? '/' : '/' . $request->path();
