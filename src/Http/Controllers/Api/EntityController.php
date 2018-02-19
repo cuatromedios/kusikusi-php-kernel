@@ -300,4 +300,46 @@ class EntityController extends Controller
             return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
         }
     }
+    /**
+     * Create the specified relation.
+     *
+     * @param $id
+     * @return \Illuminate\Http\Response
+     */
+    public function postRelation($id, Request $request)
+    {
+        try {
+            // TODO: Filter the json to delete al not used data
+            if (Gate::allows('patch-entity', $id) === true) {
+                $entityPostedId = Entity::postRelation($id, $request->json()->all());
+                return (new ApiResponse($entityPostedId, TRUE))->response();
+            } else {
+                return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+            }
+        } catch (\Exception $e) {
+            $exceptionDetails = ExceptionDetails::filter($e);
+            return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
+        }
+    }
+    /**
+     * Create the specified entity.
+     *
+     * @param $id
+     * @return \Illuminate\Http\Response
+     */
+    public function deleteRelation($id, Request $request)
+    {
+        try {
+            // TODO: Filter the json to delete al not used data
+            if (Gate::allows('patch-entity', $id) === true) {
+                $entityPostedId = Entity::deleteRelation($id, $request->json()->all());
+                return (new ApiResponse($entityPostedId, TRUE))->response();
+            } else {
+                return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+            }
+        } catch (\Exception $e) {
+            $exceptionDetails = ExceptionDetails::filter($e);
+            return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
+        }
+    }
 }

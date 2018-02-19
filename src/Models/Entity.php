@@ -217,6 +217,42 @@ class Entity extends Model
     }
 
     /**
+     * Post a relation.
+     *
+     * @param $id
+     * @param $information
+     * @return \Illuminate\Http\JsonResponse|string
+     */
+    public static function postRelation($id, $information)
+    {
+        //TODO: Sanitize the $information
+        $entity = Entity::where("id", $id)->firstOrFail();
+        if (!isset($information['kind'])) {$information['kind'] = 'relation';}
+        if (!isset($information['position'])) {$information['position'] = 0;}
+        if (!isset($information['tags'])) {$information['tags'] = '';}
+        if (!isset($information['depth'])) {$information['depth'] = 0;}
+        $relation = DB::table('relations')->where(['entity_caller_id' => $id, 'entity_called_id' => $information['id'], 'kind' => $information['kind']])->delete();
+        $entity->relations()->attach($information['id'], ['kind' => $information['kind'], 'position' => $information['position'], 'tags' => $information['tags'], 'depth' => $information['depth']]);
+        return $entity['id'];
+    }
+
+    /**
+     * Post a relation.
+     *
+     * @param $id
+     * @param $information
+     * @return \Illuminate\Http\JsonResponse|string
+     */
+    public static function deleteRelation($id, $information)
+    {
+        //TODO: Sanitize the $information
+        $entity = Entity::where("id", $id)->firstOrFail();
+        if (!isset($information['kind'])) {$information['kind'] = 'relation';}
+        $relation = DB::table('relations')->where(['entity_caller_id' => $id, 'entity_called_id' => $information['id'], 'kind' => $information['kind']])->delete();
+        return $entity['id'];
+    }
+
+    /**
      * Updates an entity.
      *
      * @param $information
