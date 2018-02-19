@@ -308,9 +308,9 @@ class Entity extends Model
                 if (count($orderItemParts) < 3 || (isset($orderItemParts[2]) && $orderItemParts[2] !== 'desc')) {
                     $orderItemParts[2] = 'asc';
                 }
-                if ($orderItemParts[0] === 'e' || $orderItemParts[0] === 'entity') { $orderItemParts[0] = 'entities'; }
-                else if ($orderItemParts[0] === 'c' || $orderItemParts[0] === 'content') { $orderItemParts[0] = 'contents'; }
-                else if ($orderItemParts[0] === 'r' || $orderItemParts[0] === 'relation') { $orderItemParts[0] = 'relations'; }
+                if ($orderItemParts[0] === 'e' || $orderItemParts[0] === 'entity' || $orderItemParts[0] === 'entities') { $orderItemParts[0] = 'entities'; }
+                else if ($orderItemParts[0] === 'c' || $orderItemParts[0] === 'content' || $orderItemParts[0] === 'contents') { $orderItemParts[0] = 'contents'; }
+                else if ($orderItemParts[0] === 'r' || $orderItemParts[0] === 'relation' || $orderItemParts[0] === 'relations') { $orderItemParts[0] = 'relations'; }
                 else { $orderItemParts[0] = 'data'; }
                 $collapsedOrders[$orderItemParts[0].'.'.$orderItemParts[1]] = $orderItemParts[2];
             }
@@ -320,11 +320,11 @@ class Entity extends Model
         // Join tables based on requested fields, both for contents and data models.
 
         if (count($fields) === 0) {
-            $fields = ['entities.*', 'data.*', 'contents.*'];
+            $fields = ['entities.*', 'data.*', 'contents.*', 'relations.*'];
         }
-
         if (count($fields) > 0) {
             // TODO: Check if the requested fields are valid for the model
+            // TODO: Orders are not taken in account if fields does not exist, is that ok?
             $fieldsForSelect = [];
             $fieldsArray = is_array($fields) ? $fields : explode(',', $fields);
             $contentIndex = 0;
@@ -351,7 +351,6 @@ class Entity extends Model
                             case 'relations':
                             case 'relation':
                             case 'r':
-                                // Entity fields doesn't need to be joined, just the fiels to be selected
                                 if ($groupField === '*') {
                                     $relationFields = ['kind', 'position', 'tags', 'depth'];
                                     foreach ($relationFields as $relationField) {
@@ -520,8 +519,11 @@ class Entity extends Model
      * @param string $lang The name of the language for content fields or null. If null, default language will be taken.
      * @return Collection
      */
-    public static function getAncestors($id, $fields = [],  $lang = NULL, $order = ['relations.position'])
+    public static function getAncestors($id, $fields = [],  $lang = NULL, $order = NULL)
     {
+        if (NULL === $order) {
+            $order = ['r.depth:desc'];
+        }
         $query =  DB::table('entities')
             ->join('relations as ar', function ($join) use ($id) {
                 $join->on('ar.entity_called_id', '=', 'entities.id')
@@ -540,8 +542,11 @@ class Entity extends Model
      * @param array $order The list of order sentences like ['contents.title:asc'].
      * @return Collection
      */
-    public static function getDescendants($id, $fields = [],  $lang = NULL, $order = ['relations.depth:asc'])
+    public static function getDescendants($id, $fields = [],  $lang = NULL, $order = ['r.depth:asc'])
     {
+        if (NULL === $order) {
+            $order = ['r.depth:asc'];
+        }
         $query =  DB::table('entities')
             ->join('relations as ar', function ($join) use ($id) {
                 $join->on('ar.entity_caller_id', '=', 'entities.id')
@@ -560,8 +565,11 @@ class Entity extends Model
      * @param array $order The list of order sentences like ['contents.title:asc'].
      * @return Collection
      */
-    public static function getEntityRelations($id, $kind = NULL, $fields = [],  $lang = NULL, $order = ['relations.depth:asc'])
+    public static function getEntityRelations($id, $kind = NULL, $fields = [],  $lang = NULL, $order = NULL)
     {
+        if (NULL === $order) {
+            $order = ['r.depth:asc'];
+        }
         $query =  DB::table('relations as ar')
             ->where('ar.entity_caller_id', '=', $id);
         if (NULL != $kind) {
@@ -584,8 +592,11 @@ class Entity extends Model
      * @param array $order The list of order sentences like ['contents.title:asc'].
      * @return Collection
      */
-    public static function getInverseEntityRelations($id, $kind = NULL, $fields = [],  $lang = NULL, $order = ['relations.depth:asc'])
+    public static function getInverseEntityRelations($id, $kind = NULL, $fields = [],  $lang = NULL, $order = NULL)
     {
+        if (NULL === $order) {
+            $order = ['r.depth:asc'];
+        }
         $query =  DB::table('relations as ar')
             ->where('ar.entity_called_id', '=', $id);
         if (NULL != $kind) {
@@ -608,7 +619,7 @@ class Entity extends Model
      */
     public static function isDescendant($id1, $id2)
     {
-        $ancestors = Entity::getAncestors($id1);
+        $ancestors = Entity::getAncestors($id1, NULL, NULL, ['r.depth:asc']);
         foreach ($ancestors as $ancestor) {
             if ($ancestor['id'] === $id2) {
                 return true;
