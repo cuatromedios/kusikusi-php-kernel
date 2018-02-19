@@ -226,6 +226,7 @@ class Entity extends Model
     public static function postRelation($id, $information)
     {
         //TODO: Sanitize the $information
+        //TODO: Do not allow blank kind field
         $entity = Entity::where("id", $id)->firstOrFail();
         if (!isset($information['kind'])) {$information['kind'] = 'relation';}
         if (!isset($information['position'])) {$information['position'] = 0;}
@@ -243,12 +244,12 @@ class Entity extends Model
      * @param $information
      * @return \Illuminate\Http\JsonResponse|string
      */
-    public static function deleteRelation($id, $information)
+    public static function deleteRelation($id, $called, $kind)
     {
         //TODO: Sanitize the $information
         $entity = Entity::where("id", $id)->firstOrFail();
-        if (!isset($information['kind'])) {$information['kind'] = 'relation';}
-        $relation = DB::table('relations')->where(['entity_caller_id' => $id, 'entity_called_id' => $information['id'], 'kind' => $information['kind']])->delete();
+        $where = ['entity_caller_id' => $id, 'entity_called_id' => $called, 'kind' => $kind];
+        $relation = DB::table('relations')->where($where)->delete();
         return $entity['id'];
     }
 

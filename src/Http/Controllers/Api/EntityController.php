@@ -327,12 +327,12 @@ class EntityController extends Controller
      * @param $id
      * @return \Illuminate\Http\Response
      */
-    public function deleteRelation($id, Request $request)
+    public function deleteRelation($id, $called, $kind)
     {
         try {
             // TODO: Filter the json to delete al not used data
             if (Gate::allows('patch-entity', $id) === true) {
-                $entityPostedId = Entity::deleteRelation($id, $request->json()->all());
+                $entityPostedId = Entity::deleteRelation($id, $called, $kind);
                 return (new ApiResponse($entityPostedId, TRUE))->response();
             } else {
                 return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
