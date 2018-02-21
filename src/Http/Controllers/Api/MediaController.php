@@ -70,7 +70,7 @@ class MediaController extends Controller
                         'function' => $function
                     ];
                     $storageFileName = $function . '.' . $data['format'] ;
-                    Storage::disk('media')->putFileAs($id, $file, $storageFileName);
+                    Storage::disk('media_original')->putFileAs($id, $file, $storageFileName);
                     return $data;
                 }
                 $data = NULL;
