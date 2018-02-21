@@ -53,11 +53,8 @@ class MediaController extends Controller
         if ($exists = Storage::disk('media_processed')->exists($publicFilePath)) {
             $cachedImage = Storage::disk('media_processed')->get($publicFilePath);
             return new Response(
-                $cachedImage,
-                200,
-                [
-                    'Content-Type' => Storage::disk('media_processed')->getMimeType($publicFilePath)
-                ]
+                $cachedImage,  200,
+                ['Content-Type' => Storage::disk('media_processed')->getMimeType($publicFilePath)]
             );
         }
         if (!$exists = Storage::disk('media_original')->exists($originalFilePath)) {
@@ -66,7 +63,10 @@ class MediaController extends Controller
         $filedata = Storage::disk('media_original')->get($originalFilePath);
 
         if (array_search($entity['data']['format'], ['jpg', 'png', 'gif']) === FALSE) {
-            return($filedata->response());
+            return new Response(
+                $filedata,  200,
+                ['Content-Type' => Storage::disk('media_original')->getMimeType($originalFilePath)]
+            );
         }
 
         // Set default values if not set
