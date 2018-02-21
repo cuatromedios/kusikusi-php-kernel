@@ -56,7 +56,7 @@ class ApiResponse
     }
     public function setStatus($status) {
         $status = (int) $status;
-        if (is_nan($status)) { $status = 0; }
+        if (is_nan($status)) { $status = 500; }
         $this->_status = $status;
     }
     public function setInfo($info) {
