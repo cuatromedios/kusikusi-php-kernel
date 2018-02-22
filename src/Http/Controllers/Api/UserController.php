@@ -1,6 +1,6 @@
 <?php
 
-namespace Cuatromedios\Kusikusi\Http\Controllers\api;
+namespace Cuatromedios\Kusikusi\Http\Controllers\Api;
 
 use Cuatromedios\Kusikusi\Http\Controllers\Controller;
 use Cuatromedios\Kusikusi\Models\Http\ApiResponse;
