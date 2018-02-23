@@ -571,6 +571,18 @@ class Entity extends Model
     }
 
     /**
+     * Returns an entity's ancestor of specific depth.
+     *
+     * @param $id
+     * @return \Illuminate\Http\JsonResponse|string
+     */
+    public static function getAncestor($id, $depth = 0, $fields = [], $lang = NULL)
+    {
+        $ancestor = DB::table('relations')->where(["entity_caller_id" => $id])->where(["kind" => "ancestor"])->where(["depth" => $depth])->select(["entity_called_id"])->get();
+        return Entity::getOne($ancestor[0]->entity_called_id, $fields, $lang);
+    }
+
+    /**
      * Get a list of descendants.
      *
      * @param string $id The id of the entity whose descendants need to be returned
