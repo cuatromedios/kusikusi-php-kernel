@@ -331,7 +331,9 @@ class Entity extends Model
         if (!isset($query)) {
             $query = DB::table('entities');
         }
+        $lang = isset($lang) ? $lang : Config::get('general.langs')[0];
         $query->where('deleted_at', NULL);
+
 
         // Preprocess the order fields
         // TODO: This may be more efficient using REGEX
