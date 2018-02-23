@@ -79,7 +79,7 @@ class Entity extends Model
             return $this->hasOne('Cuatromedios\\Kusikusi\\Models\\Entity', 'id');
         }
     }
-    /*
+    /**
      *  Return a class from a string
      */
     public static function getDataClass($modelName) {
@@ -90,8 +90,8 @@ class Entity extends Model
         }
     }
 
-    /*
-     *  Return TRUE if the model has dataField
+    /**
+     *  Return TRUE if the model has dataFields
      */
     public static function hasDataFields($modelName) {
         $modelClass = Entity::getDataClass($modelName);
@@ -217,7 +217,7 @@ class Entity extends Model
     }
 
     /**
-     * Post a relation.
+     * Creates a relation.
      *
      * @param $id
      * @param $information
@@ -239,7 +239,7 @@ class Entity extends Model
     }
 
     /**
-     * Post a relation.
+     * Deletes a relation.
      *
      * @param $id
      * @param $information
@@ -334,7 +334,9 @@ class Entity extends Model
         if (!isset($query)) {
             $query = DB::table('entities');
         }
+        $lang = isset($lang) ? $lang : Config::get('general.langs')[0];
         $query->where('deleted_at', NULL);
+
 
         // Preprocess the order fields
         // TODO: This may be more efficient using REGEX
@@ -546,13 +548,13 @@ class Entity extends Model
                     ->where('ar.entity_called_id', '=', $id)
                     ->where('ar.kind', '=', 'ancestor')
                     // ->whereRaw('FIND_IN_SET("a",ar.tags)')
-                    ->where('ar.depth', '=', 0);
+                    ->where('ar.depth', '=', 1);
             });
         return Entity::get($query, $fields, $lang, $order);
     }
 
     /**
-     * Get a list of children.
+     * Get a list of ancestors.
      *
      * @param string $id The id of the entity whose ancestors need to be returned
      * @param array $fields An array of strings representing a field like entities.model, contents.title or media.format
@@ -571,6 +573,18 @@ class Entity extends Model
                     ->where('ar.kind', '=', 'ancestor');
             });
         return Entity::get($query, $fields, $lang, $order);
+    }
+
+    /**
+     * Returns an entity's ancestor of specific depth.
+     *
+     * @param $id
+     * @return \Illuminate\Http\JsonResponse|string
+     */
+    public static function getAncestor($id, $depth = 0, $fields = [], $lang = NULL)
+    {
+        $ancestor = DB::table('relations')->where(["entity_caller_id" => $id])->where(["kind" => "ancestor"])->where(["depth" => $depth])->select(["entity_called_id"])->get();
+        return Entity::getOne($ancestor[0]->entity_called_id, $fields, $lang);
     }
 
     /**
@@ -810,10 +824,10 @@ class Entity extends Model
             // Create the ancestors relations
             if (isset($entity['parent']) && $entity['parent'] != '') {
                 $parentEntity = Entity::find($entity['parent']);
-                $entity->relations()->attach($parentEntity['id'], ['kind' => 'ancestor', 'depth' => 0]);
+                $entity->relations()->attach($parentEntity['id'], ['kind' => 'ancestor', 'depth' => 1]);
                 $ancestors = ($parentEntity->relations()->where('kind', 'ancestor')->orderBy('depth'))->get();
                 for ($a = 0; $a < count($ancestors); $a++) {
-                    $entity->relations()->attach($ancestors[$a]['id'], ['kind' => 'ancestor', 'depth' => ($a + 1)]);
+                    $entity->relations()->attach($ancestors[$a]['id'], ['kind' => 'ancestor', 'depth' => ($a + 2)]);
                 }
             };
             Entity::updateEntityVersion($entity['id']);
@@ -874,6 +888,12 @@ class Entity extends Model
         unset($model['data']);
         return $model;
     }
+
+    /**
+     * Updates the entity version, tree version and full version of the given entity
+     * as well as it´s ancestors (and inverse relations)
+     * @param $entity
+     */
     public static function updateEntityVersion($entity){
         // Updates the version of the own entity and its full version as well
         DB::table('entities')->where('id', $entity)
@@ -889,7 +909,7 @@ class Entity extends Model
                 ->increment('full_version');
         }
 
-        // Now the relation version, this will update relations_version of entitites calling this, and also the full_Version field of its ancestors
+        // Now updates the tree and full version of the relations entity's ancestors and the relation version of the given entity
         $relateds = self::getInverseEntityRelations($entity, NULL, ['e.id']);
         foreach ($relateds as $related) {
             $ancestors = self::getAncestors($related, ['e.id']);
@@ -905,8 +925,16 @@ class Entity extends Model
                 ->increment('relations_version');
         }
     }
+
+    /**
+     * Updates the relation version of the caller entity and updates
+     * the tree version and full version of the called entity and it's
+     * ancestors
+     * @param $caller
+     * @param $called
+     */
     public static function updateRelationVersion($caller, $called){
-        // Update the tree and full version of the called entity
+        // Update the tree and full version of the called entity (and it's ancestors)
         $relateds = self::getInverseEntityRelations($called, NULL, ['e.id']);
         foreach ($relateds as $related) {
             $ancestors = self::getAncestors($related, ['e.id']);
