@@ -334,7 +334,9 @@ class Entity extends Model
         if (!isset($query)) {
             $query = DB::table('entities');
         }
+        $lang = isset($lang) ? $lang : Config::get('general.langs')[0];
         $query->where('deleted_at', NULL);
+
 
         // Preprocess the order fields
         // TODO: This may be more efficient using REGEX
@@ -571,6 +573,18 @@ class Entity extends Model
                     ->where('ar.kind', '=', 'ancestor');
             });
         return Entity::get($query, $fields, $lang, $order);
+    }
+
+    /**
+     * Returns an entity's ancestor of specific depth.
+     *
+     * @param $id
+     * @return \Illuminate\Http\JsonResponse|string
+     */
+    public static function getAncestor($id, $depth = 0, $fields = [], $lang = NULL)
+    {
+        $ancestor = DB::table('relations')->where(["entity_caller_id" => $id])->where(["kind" => "ancestor"])->where(["depth" => $depth])->select(["entity_called_id"])->get();
+        return Entity::getOne($ancestor[0]->entity_called_id, $fields, $lang);
     }
 
     /**
