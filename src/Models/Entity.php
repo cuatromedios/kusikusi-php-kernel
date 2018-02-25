@@ -231,6 +231,7 @@ class Entity extends Model
         if (!isset($information['kind'])) {$information['kind'] = 'relation';}
         if (!isset($information['position'])) {$information['position'] = 0;}
         if (!isset($information['tags'])) {$information['tags'] = '';}
+        if (is_array($information['tags'])) {$information['tags'] = implode(',', $information['tags']);}
         if (!isset($information['depth'])) {$information['depth'] = 0;}
         $relation = DB::table('relations')->where(['entity_caller_id' => $id, 'entity_called_id' => $information['id'], 'kind' => $information['kind']])->delete();
         $entity->relations()->attach($information['id'], ['kind' => $information['kind'], 'position' => $information['position'], 'tags' => $information['tags'], 'depth' => $information['depth']]);
