@@ -330,13 +330,25 @@ class Entity extends Model
      * @param string $lang The name of the language for content fields or null. If null, default language will be taken.
      * @return Collection
      */
-    public static function get($query = NULL, $fields = [],  $lang = NULL, $order = NULL)
+    public static function get($query = NULL, $fields = [],  $lang = NULL, $order = NULL, $filter = NULL)
     {
         if (!isset($query)) {
             $query = DB::table('entities');
         }
         $lang = isset($lang) ? $lang : Config::get('general.langs')[0];
         $query->where('deleted_at', NULL);
+        if (isset($filter)) {
+            if (!is_array($filter)) {
+                $filter = explode(",", $filter);
+            }
+            for ($f = 0; $f < count($filter); $f++) {
+                // TODO: Allow more operators like < > <>
+                if (!is_array($filter[$f])) {
+                    $filter[$f] = explode(":", $filter[$f]);
+                }
+                $query->where(...$filter[$f]);
+            }
+        }
 
         // Preprocess the order fields
         // TODO: This may be more efficient using REGEX
@@ -542,17 +554,17 @@ class Entity extends Model
      * @param string $lang The name of the language for content fields or null. If null, default language will be taken.
      * @return Collection
      */
-    public static function getChildren($id, $fields = [],  $lang = NULL, $order = 'entities.created_at.desc')
+    public static function getChildren($id, $fields = [],  $lang = NULL, $order = 'entities.created_at.desc', $filter = NULL)
     {
-        $query =  DB::table('entities')
-            ->join('relations as ar', function ($join) use ($id) {
-                $join->on('ar.entity_caller_id', '=', 'entities.id')
-                    ->where('ar.entity_called_id', '=', $id)
-                    ->where('ar.kind', '=', 'ancestor')
-                    // ->whereRaw('FIND_IN_SET("a",ar.tags)')
-                    ->where('ar.depth', '=', 1);
-            });
-        return Entity::get($query, $fields, $lang, $order);
+        $query =  DB::table('entities');
+        $query->join('relations as ar', function ($join) use ($id) {
+            $join->on('ar.entity_caller_id', '=', 'entities.id')
+                ->where('ar.entity_called_id', '=', $id)
+                ->where('ar.kind', '=', 'ancestor')
+                // ->whereRaw('FIND_IN_SET("a",ar.tags)')
+                ->where('ar.depth', '=', 1);
+        });
+        return Entity::get($query, $fields, $lang, $order, $filter);
     }
 
     /**
@@ -634,8 +646,8 @@ class Entity extends Model
             $query->where('ar.kind', '<>', 'ancestor');
         }
         $query->leftJoin('entities', function ($join) use ($id) {
-                $join->on('ar.entity_called_id', '=', 'entities.id');
-            });
+            $join->on('ar.entity_called_id', '=', 'entities.id');
+        });
         return Entity::get($query, $fields, $lang, $order);
     }
 
