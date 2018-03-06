@@ -33,8 +33,14 @@ class MediaController extends Controller
     {
         try {
             // TODO: Filter the json to delete al not used data
-            $request['parent'] = 'media';
-            if (Gate::allows('post-entity', 'media') === true) {
+            $information = $request->json()->all();
+            if (!isset($information['parent'])) {
+                $information['parent'] = 'media';
+            }
+            if (!isset($information['model'])) {
+                $information['model'] = 'medium';
+            }
+            if (Gate::allows('post-entity', $information['parent']) === true) {
                 $entityPostedId = Entity::post($request->json()->all());
                 return (new ApiResponse($entityPostedId, TRUE))->response();
             } else {

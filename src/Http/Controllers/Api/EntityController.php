@@ -194,8 +194,9 @@ class EntityController extends Controller
             $fields = $request->input('fields', []);
             $lang = $request->input('lang', Config::get('general.langs')[0]);
             $order = $request->input('order', NULL);
+            $filter = $request->input('filter', NULL);
             if (Gate::allows('get-entity', $id)) {
-                $collection = Entity::getChildren($id, $fields, $lang, $order);
+                $collection = Entity::getChildren($id, $fields, $lang, $order, $filter);
                 return (new ApiResponse($collection, TRUE))->response();
             } else {
                 return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();

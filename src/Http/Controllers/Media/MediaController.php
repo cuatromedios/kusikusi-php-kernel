@@ -40,7 +40,7 @@ class MediaController extends Controller
         } catch (\Exception $e) {
             return (new ApiResponse(NULL, FALSE, 'Media ' . ApiResponse::TEXT_NOTFOUND, ApiResponse::STATUS_NOTFOUND))->response();
         }
-        $presetSettings = Config::get('media.' . $preset, NULL);
+        $presetSettings = Config::get('media.presets.' . $preset, NULL);
         if (NULL === $presetSettings) {
             return (new ApiResponse(NULL, FALSE, 'Preset ' . ApiResponse::TEXT_NOTFOUND, ApiResponse::STATUS_NOTFOUND))->response();
         }
