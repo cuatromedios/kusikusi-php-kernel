@@ -207,13 +207,13 @@ class Entity extends Model
      * Creates an entity.
      *
      * @param $information
-     * @return \Illuminate\Http\JsonResponse|string
+     * @return \Illuminate\Http\JsonResponse|array
      */
     public static function post($information)
     {
         //TODO: Sanitize the $information
         $entity = Entity::create($information);
-        return $entity['id'];
+        return ['id' => $entity['id']];
     }
 
     /**
@@ -221,7 +221,7 @@ class Entity extends Model
      *
      * @param $id
      * @param $information
-     * @return \Illuminate\Http\JsonResponse|string
+     * @return \Illuminate\Http\JsonResponse|array
      */
     public static function postRelation($id, $information)
     {
@@ -236,7 +236,7 @@ class Entity extends Model
         $relation = DB::table('relations')->where(['entity_caller_id' => $id, 'entity_called_id' => $information['id'], 'kind' => $information['kind']])->delete();
         $entity->relations()->attach($information['id'], ['kind' => $information['kind'], 'position' => $information['position'], 'tags' => $information['tags'], 'depth' => $information['depth']]);
         Entity::updateRelationVersion($id, $information['id']);
-        return $entity['id'];
+        return ['id' => $entity['id']];
     }
 
     /**
@@ -244,7 +244,7 @@ class Entity extends Model
      *
      * @param $id
      * @param $information
-     * @return \Illuminate\Http\JsonResponse|string
+     * @return \Illuminate\Http\JsonResponse|array
      */
     public static function deleteRelation($id, $called, $kind)
     {
@@ -253,42 +253,42 @@ class Entity extends Model
         $where = ['entity_caller_id' => $id, 'entity_called_id' => $called, 'kind' => $kind];
         Entity::updateRelationVersion($id, $called);
         $relation = DB::table('relations')->where($where)->delete();
-        return $entity['id'];
+        return ['id' => $entity['id']];
     }
 
     /**
      * Updates an entity.
      *
      * @param $information
-     * @return \Illuminate\Http\JsonResponse|string
+     * @return \Illuminate\Http\JsonResponse|array
      */
     public static function patch($id, $information)
     {
         //TODO: Sanitize the $information
         $entity = Entity::where("id", $id)->firstOrFail();
         $entity->update($information);
-        return $entity['id'];
+        return ['id' => $entity['id']];
     }
 
     /**
      * Soft deletes an entity.
      *
      * @param $id
-     * @return \Illuminate\Http\JsonResponse|string
+     * @return \Illuminate\Http\JsonResponse|array
      */
 
     public static function softDelete($id)
     {
         $entity = Entity::destroy($id);
         Entity::updateEntityVersion($id);
-        return $entity['id'];
+        return ['id' => $entity['id']];
     }
 
     /**
      * Hard deletes an entity.
      *
      * @param $id
-     * @return \Illuminate\Http\JsonResponse|string
+     * @return \Illuminate\Http\JsonResponse|array
      */
 
     public static function hardDelete($id)
@@ -303,7 +303,7 @@ class Entity extends Model
             $entity->forceDelete();
             Entity::updateEntityVersion($id);
         }
-        return $entity['id'];
+        return ['id' => $entity['id']];
     }
 
 
