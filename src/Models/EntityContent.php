@@ -4,7 +4,7 @@ namespace Cuatromedios\Kusikusi\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Content extends Model
+class EntityContent extends Model
 {
     /**
      * The table associated with the model.

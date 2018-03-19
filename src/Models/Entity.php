@@ -64,7 +64,7 @@ class Entity extends Model
      */
     public function contents()
     {
-        return $this->hasMany('Cuatromedios\\Kusikusi\\Models\\Content', 'entity_id');
+        return $this->hasMany('Cuatromedios\\Kusikusi\\Models\\EntityContent', 'entity_id');
     }
 
     /**
