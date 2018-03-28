@@ -33,7 +33,7 @@ class EntityData extends Model
      */
     public function entity()
     {
-        return $this->belongsTo('App\Models\Entity');
+        return $this->belongsTo('Cuatromedios\Kusikusi\Models\Entity');
     }
 
     /**

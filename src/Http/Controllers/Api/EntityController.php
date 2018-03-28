@@ -34,7 +34,7 @@ class EntityController extends Controller
             $lang = $request->input('lang', Config::get('general.langs')[0]);
             $fields = $request->input('fields', []);
             $entity = Entity::getOne($id, $fields, $lang);
-            if (Gate::allows('get-entity', $id)) {
+            if (Gate::allows('get-entity', [$id])) {
                 return (new ApiResponse($entity, TRUE))->response();
             } else {
                 return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
@@ -55,7 +55,7 @@ class EntityController extends Controller
     {
         try {
             // TODO: Filter the json to delete al not used data
-            if (Gate::allows('post-entity', $request->parent) === true) {
+            if (Gate::allows('post-entity', [$request->parent]) === true) {
                 $entityPostedId = Entity::post($request->json()->all());
                 return (new ApiResponse($entityPostedId, TRUE))->response();
             } else {
@@ -77,7 +77,7 @@ class EntityController extends Controller
     {
         try {
             // TODO: Filter the json to delete all not used data
-            if (Gate::allows('patch-entity', $id) === true) {
+            if (Gate::allows('patch-entity', [$id]) === true) {
                 $entityPatchedId = Entity::patch($id, $request->json()->all());
                 return (new ApiResponse($entityPatchedId, TRUE))->response();
             } else {
@@ -100,7 +100,7 @@ class EntityController extends Controller
     public function softDelete($id)
     {
         try {
-            if (Gate::allows('delete-entity', $id) === true) {
+            if (Gate::allows('delete-entity', [$id]) === true) {
                 $entitySoftDeletedId = Entity::softDelete($id);
                 return (new ApiResponse($entitySoftDeletedId, TRUE))->response();
             } else {
@@ -122,7 +122,7 @@ class EntityController extends Controller
     public function hardDelete($id)
     {
         try {
-            if (Gate::allows('delete-entity', $id) === true) {
+            if (Gate::allows('delete-entity', [$id]) === true) {
                 $entityHardDeletedId = Entity::hardDelete($id);
                 return (new ApiResponse($entityHardDeletedId, TRUE))->response();
             } else {
@@ -147,7 +147,7 @@ class EntityController extends Controller
             $lang = $request->input('lang', Config::get('general.langs')[0]);
             $fields = $request->input('fields', []);
             $entity = Entity::getParent($id, $fields, $lang);
-            if (Gate::allows('get-entity', $id)) {
+            if (Gate::allows('get-entity', [$id])) {
                 return (new ApiResponse($entity, TRUE))->response();
             } else {
                 return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
@@ -195,7 +195,7 @@ class EntityController extends Controller
             $lang = $request->input('lang', Config::get('general.langs')[0]);
             $order = $request->input('order', NULL);
             $filter = $request->input('filter', NULL);
-            if (Gate::allows('get-entity', $id)) {
+            if (Gate::allows('get-entity', [$id, 'children'])) {
                 $collection = Entity::getChildren($id, $fields, $lang, $order, $filter);
                 return (new ApiResponse($collection, TRUE))->response();
             } else {
@@ -219,7 +219,7 @@ class EntityController extends Controller
             $fields = $request->input('fields', []);
             $lang = $request->input('lang', Config::get('general.langs')[0]);
             $order = $request->input('order', NULL);
-            if (Gate::allows('get-entity', $id)) {
+            if (Gate::allows('get-entity', [$id, 'ancestors'])) {
                 $collection = Entity::getAncestors($id, $fields, $lang, $order);
                 return (new ApiResponse($collection, TRUE))->response();
             } else {
@@ -243,7 +243,7 @@ class EntityController extends Controller
             $fields = $request->input('fields', []);
             $lang = $request->input('lang', Config::get('general.langs')[0]);
             $order = $request->input('order', NULL);
-            if (Gate::allows('get-entity', $id)) {
+            if (Gate::allows('get-entity', [$id, 'descendants'])) {
                 $collection = Entity::getDescendants($id, $fields, $lang, $order);
                 return (new ApiResponse($collection, TRUE))->response();
             } else {
@@ -267,7 +267,7 @@ class EntityController extends Controller
             $fields = $request->input('fields', []);
             $lang = $request->input('lang', Config::get('general.langs')[0]);
             $order = $request->input('order', NULL);
-            if (Gate::allows('get-entity', $id)) {
+            if (Gate::allows('get-entity', [$id, 'relations'])) {
                 $collection = Entity::getEntityRelations($id, $kind, $fields, $lang, $order);
                 return (new ApiResponse($collection, TRUE))->response();
             } else {
@@ -290,7 +290,7 @@ class EntityController extends Controller
             $fields = $request->input('fields', []);
             $lang = $request->input('lang', Config::get('general.langs')[0]);
             $order = $request->input('order', NULL);
-            if (Gate::allows('get-entity', $id)) {
+            if (Gate::allows('get-entity', [$id, 'inverse-relations'])) {
                 $collection = Entity::getInverseEntityRelations($id, $kind, $fields, $lang, $order);
                 return (new ApiResponse($collection, TRUE))->response();
             } else {
@@ -311,7 +311,7 @@ class EntityController extends Controller
     {
         try {
             // TODO: Filter the json to delete al not used data
-            if (Gate::allows('patch-entity', $id) === true) {
+            if (Gate::allows('patch-entity', [$id, 'relation']) === true) {
                 $entityPostedId = Entity::postRelation($id, $request->json()->all());
                 return (new ApiResponse($entityPostedId, TRUE))->response();
             } else {
@@ -332,7 +332,7 @@ class EntityController extends Controller
     {
         try {
             // TODO: Filter the json to delete al not used data
-            if (Gate::allows('patch-entity', $id) === true) {
+            if (Gate::allows('patch-entity', [$id, 'relation']) === true) {
                 $entityPostedId = Entity::deleteRelation($id, $called, $kind);
                 return (new ApiResponse($entityPostedId, TRUE))->response();
             } else {

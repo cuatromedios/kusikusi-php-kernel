@@ -68,6 +68,14 @@ class Entity extends Model
     }
 
     /**
+     * Get the activity related to the Entity.
+     */
+    public function activity()
+    {
+        return $this->hasMany('Cuatromedios\\Kusikusi\\Models\\Activity', 'entity_id');
+    }
+
+    /**
      * Get the other models related.
      */
     public function data()
