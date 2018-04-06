@@ -77,6 +77,7 @@ class MediaController extends Controller
                     ];
                     $storageFileName = $function . '.' . $data['format'] ;
                     Storage::disk('media_original')->putFileAs($id, $file, $storageFileName);
+                    Storage::disk('media_processed')->deleteDirectory($id);
                     return $data;
                 }
                 $data = NULL;
