@@ -4,7 +4,7 @@ namespace Cuatromedios\Kusikusi\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Data extends Model
+class EntityData extends Model
 {
     /**
      * The table associated with the model will be always Entity.
@@ -33,7 +33,7 @@ class Data extends Model
      */
     public function entity()
     {
-        return $this->belongsTo('App\Models\Entity');
+        return $this->belongsTo('Cuatromedios\Kusikusi\Models\Entity');
     }
 
     /**

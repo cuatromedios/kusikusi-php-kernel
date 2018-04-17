@@ -64,7 +64,15 @@ class Entity extends Model
      */
     public function contents()
     {
-        return $this->hasMany('Cuatromedios\\Kusikusi\\Models\\Content', 'entity_id');
+        return $this->hasMany('Cuatromedios\\Kusikusi\\Models\\EntityContent', 'entity_id');
+    }
+
+    /**
+     * Get the activity related to the Entity.
+     */
+    public function activity()
+    {
+        return $this->hasMany('Cuatromedios\\Kusikusi\\Models\\Activity', 'entity_id');
     }
 
     /**
@@ -79,7 +87,7 @@ class Entity extends Model
             return $this->hasOne('Cuatromedios\\Kusikusi\\Models\\Entity', 'id');
         }
     }
-    /*
+    /**
      *  Return a class from a string
      */
     public static function getDataClass($modelName) {
@@ -90,8 +98,8 @@ class Entity extends Model
         }
     }
 
-    /*
-     *  Return TRUE if the model has dataField
+    /**
+     *  Return TRUE if the model has dataFields
      */
     public static function hasDataFields($modelName) {
         $modelClass = Entity::getDataClass($modelName);
@@ -207,21 +215,21 @@ class Entity extends Model
      * Creates an entity.
      *
      * @param $information
-     * @return \Illuminate\Http\JsonResponse|string
+     * @return \Illuminate\Http\JsonResponse|array
      */
     public static function post($information)
     {
         //TODO: Sanitize the $information
         $entity = Entity::create($information);
-        return $entity['id'];
+        return ['id' => $entity['id']];
     }
 
     /**
-     * Post a relation.
+     * Creates a relation.
      *
      * @param $id
      * @param $information
-     * @return \Illuminate\Http\JsonResponse|string
+     * @return \Illuminate\Http\JsonResponse|array
      */
     public static function postRelation($id, $information)
     {
@@ -231,75 +239,79 @@ class Entity extends Model
         if (!isset($information['kind'])) {$information['kind'] = 'relation';}
         if (!isset($information['position'])) {$information['position'] = 0;}
         if (!isset($information['tags'])) {$information['tags'] = '';}
+        if (is_array($information['tags'])) {$information['tags'] = implode(',', $information['tags']);}
         if (!isset($information['depth'])) {$information['depth'] = 0;}
         $relation = DB::table('relations')->where(['entity_caller_id' => $id, 'entity_called_id' => $information['id'], 'kind' => $information['kind']])->delete();
         $entity->relations()->attach($information['id'], ['kind' => $information['kind'], 'position' => $information['position'], 'tags' => $information['tags'], 'depth' => $information['depth']]);
-        return $entity['id'];
+        Entity::updateRelationVersion($id, $information['id']);
+        return ['id' => $entity['id']];
     }
 
     /**
-     * Post a relation.
+     * Deletes a relation.
      *
      * @param $id
      * @param $information
-     * @return \Illuminate\Http\JsonResponse|string
+     * @return \Illuminate\Http\JsonResponse|array
      */
     public static function deleteRelation($id, $called, $kind)
     {
         //TODO: Sanitize the $information
         $entity = Entity::where("id", $id)->firstOrFail();
         $where = ['entity_caller_id' => $id, 'entity_called_id' => $called, 'kind' => $kind];
+        Entity::updateRelationVersion($id, $called);
         $relation = DB::table('relations')->where($where)->delete();
-        return $entity['id'];
+        return ['id' => $entity['id']];
     }
 
     /**
      * Updates an entity.
      *
      * @param $information
-     * @return \Illuminate\Http\JsonResponse|string
+     * @return \Illuminate\Http\JsonResponse|array
      */
     public static function patch($id, $information)
     {
         //TODO: Sanitize the $information
         $entity = Entity::where("id", $id)->firstOrFail();
         $entity->update($information);
-        return $entity['id'];
+        return ['id' => $entity['id']];
     }
 
     /**
      * Soft deletes an entity.
      *
      * @param $id
-     * @return \Illuminate\Http\JsonResponse|string
+     * @return \Illuminate\Http\JsonResponse|array
      */
 
     public static function softDelete($id)
     {
         $entity = Entity::destroy($id);
-        return $entity['id'];
+        Entity::updateEntityVersion($id);
+        return ['id' => $entity['id']];
     }
 
     /**
      * Hard deletes an entity.
      *
      * @param $id
-     * @return \Illuminate\Http\JsonResponse|string
+     * @return \Illuminate\Http\JsonResponse|array
      */
 
     public static function hardDelete($id)
     {
         $entity = Entity::where("id", $id)->firstOrFail();
         $modelClass =  Entity::getDataClass($entity['model']);
-//        var_dump($modelClass);
-//        die();
         if (count($modelClass::$dataFields) > 0 && isset($entity['data'])) {
             $modelClass::destroy($id);
             $entity->forceDelete();
+            Entity::updateEntityVersion($id);
         } else {
             $entity->forceDelete();
+            Entity::updateEntityVersion($id);
         }
-        return $entity['id'];
+        return ['id' => $entity['id']];
     }
 
 
@@ -326,14 +338,25 @@ class Entity extends Model
      * @param string $lang The name of the language for content fields or null. If null, default language will be taken.
      * @return Collection
      */
-    public static function get($query = NULL, $fields = [],  $lang = NULL, $order = NULL)
+    public static function get($query = NULL, $fields = [],  $lang = NULL, $order = NULL, $filter = NULL)
     {
         if (!isset($query)) {
             $query = DB::table('entities');
         }
         $lang = isset($lang) ? $lang : Config::get('general.langs')[0];
         $query->where('deleted_at', NULL);
-
+        if (isset($filter)) {
+            if (!is_array($filter)) {
+                $filter = explode(",", $filter);
+            }
+            for ($f = 0; $f < count($filter); $f++) {
+                // TODO: Allow more operators like < > <>
+                if (!is_array($filter[$f])) {
+                    $filter[$f] = explode(":", $filter[$f]);
+                }
+                $query->where(...$filter[$f]);
+            }
+        }
 
         // Preprocess the order fields
         // TODO: This may be more efficient using REGEX
@@ -361,6 +384,7 @@ class Entity extends Model
         if (count($fields) === 0) {
             $fields = ['entities.*', 'data.*', 'contents.*', 'relations.*'];
         }
+
         if (count($fields) > 0) {
             // TODO: Check if the requested fields are valid for the model
             // TODO: Orders are not taken in account if fields does not exist, is that ok?
@@ -390,6 +414,7 @@ class Entity extends Model
                             case 'relations':
                             case 'relation':
                             case 'r':
+                                // Entity fields doesn't need to be joined, just the fiels to be selected
                                 if ($groupField === '*') {
                                     $relationFields = ['kind', 'position', 'tags', 'depth'];
                                     foreach ($relationFields as $relationField) {
@@ -537,21 +562,21 @@ class Entity extends Model
      * @param string $lang The name of the language for content fields or null. If null, default language will be taken.
      * @return Collection
      */
-    public static function getChildren($id, $fields = [],  $lang = NULL, $order = 'entities.created_at.desc')
+    public static function getChildren($id, $fields = [],  $lang = NULL, $order = 'entities.created_at.desc', $filter = NULL)
     {
-        $query =  DB::table('entities')
-            ->join('relations as ar', function ($join) use ($id) {
-                $join->on('ar.entity_caller_id', '=', 'entities.id')
-                    ->where('ar.entity_called_id', '=', $id)
-                    ->where('ar.kind', '=', 'ancestor')
-                    // ->whereRaw('FIND_IN_SET("a",ar.tags)')
-                    ->where('ar.depth', '=', 0);
-            });
-        return Entity::get($query, $fields, $lang, $order);
+        $query =  DB::table('entities');
+        $query->join('relations as ar', function ($join) use ($id) {
+            $join->on('ar.entity_caller_id', '=', 'entities.id')
+                ->where('ar.entity_called_id', '=', $id)
+                ->where('ar.kind', '=', 'ancestor')
+                // ->whereRaw('FIND_IN_SET("a",ar.tags)')
+                ->where('ar.depth', '=', 1);
+        });
+        return Entity::get($query, $fields, $lang, $order, $filter);
     }
 
     /**
-     * Get a list of children.
+     * Get a list of ancestors.
      *
      * @param string $id The id of the entity whose ancestors need to be returned
      * @param array $fields An array of strings representing a field like entities.model, contents.title or media.format
@@ -629,8 +654,8 @@ class Entity extends Model
             $query->where('ar.kind', '<>', 'ancestor');
         }
         $query->leftJoin('entities', function ($join) use ($id) {
-                $join->on('ar.entity_called_id', '=', 'entities.id');
-            });
+            $join->on('ar.entity_called_id', '=', 'entities.id');
+        });
         return Entity::get($query, $fields, $lang, $order);
     }
 
@@ -821,43 +846,13 @@ class Entity extends Model
             // Create the ancestors relations
             if (isset($entity['parent']) && $entity['parent'] != '') {
                 $parentEntity = Entity::find($entity['parent']);
-                $entity->relations()->attach($parentEntity['id'], ['kind' => 'ancestor', 'depth' => 0]);
+                $entity->relations()->attach($parentEntity['id'], ['kind' => 'ancestor', 'depth' => 1]);
                 $ancestors = ($parentEntity->relations()->where('kind', 'ancestor')->orderBy('depth'))->get();
                 for ($a = 0; $a < count($ancestors); $a++) {
-                    $entity->relations()->attach($ancestors[$a]['id'], ['kind' => 'ancestor', 'depth' => ($a + 1)]);
+                    $entity->relations()->attach($ancestors[$a]['id'], ['kind' => 'ancestor', 'depth' => ($a + 2)]);
                 }
             };
-
-            // Now, update the versions
-            // First the own entity version and own full version
-            // TODO: Stop the incrementing of the entity_version when the root creates the table
-            DB::table('entities')->where('id', $entity['id'])
-                ->increment('entity_version');
-            DB::table('entities')->where('id', $entity['id'])
-                ->increment('full_version');
-            // Then the three version (and full version), using its ancestors
-            $ancestors = self::getAncestors($entity['id'], ['e.id']);
-            if (!empty($ancestors)) {
-                DB::table('entities')->whereIn('id', $ancestors)
-                    ->increment('tree_version');
-                DB::table('entities')->whereIn('id', $ancestors)
-                    ->increment('full_version');
-            }
-            // Now the relation version, this is, will update relations_version of entitites calling this, and also the full_Version field of its ancestors
-            $relateds = self::getInverseEntityRelations($entity['id'], NULL, ['e.id']);
-            foreach ($relateds as $related) {
-                $ancestors = self::getAncestors($related, ['e.id']);
-                if (!empty($ancestors)) {
-                    DB::table('entities')->whereIn('id', $ancestors)
-                        ->increment('tree_version');
-                    DB::table('entities')->whereIn('id', $ancestors)
-                        ->increment('full_version');
-                }
-            }
-            if (!empty($relateds)) {
-                DB::table('entities')->whereIn('id', $relateds)
-                    ->increment('relations_version');
-            }
+            Entity::updateEntityVersion($entity['id']);
         });
     }
 
@@ -914,5 +909,69 @@ class Entity extends Model
         };
         unset($model['data']);
         return $model;
+    }
+
+    /**
+     * Updates the entity version, tree version and full version of the given entity
+     * as well as it´s ancestors (and inverse relations)
+     * @param $entity
+     */
+    public static function updateEntityVersion($entity){
+        // Updates the version of the own entity and its full version as well
+        DB::table('entities')->where('id', $entity)
+            ->increment('entity_version');
+        DB::table('entities')->where('id', $entity)
+            ->increment('full_version');
+        // Then the three version (and full version), using its ancestors
+        $ancestors = self::getAncestors($entity, ['e.id']);
+        if (!empty($ancestors)) {
+            DB::table('entities')->whereIn('id', $ancestors)
+                ->increment('tree_version');
+            DB::table('entities')->whereIn('id', $ancestors)
+                ->increment('full_version');
+        }
+
+        // Now updates the tree and full version of the relations entity's ancestors and the relation version of the given entity
+        $relateds = self::getInverseEntityRelations($entity, NULL, ['e.id']);
+        foreach ($relateds as $related) {
+            $ancestors = self::getAncestors($related, ['e.id']);
+            if (!empty($ancestors)) {
+                DB::table('entities')->whereIn('id', $ancestors)
+                    ->increment('tree_version');
+                DB::table('entities')->whereIn('id', $ancestors)
+                    ->increment('full_version');
+            }
+        }
+        if (!empty($relateds)) {
+            DB::table('entities')->whereIn('id', $relateds)
+                ->increment('relations_version');
+        }
+    }
+
+    /**
+     * Updates the relation version of the caller entity and updates
+     * the tree version and full version of the called entity and it's
+     * ancestors
+     * @param $caller
+     * @param $called
+     */
+    public static function updateRelationVersion($caller, $called){
+        // Update the tree and full version of the called entity (and it's ancestors)
+        $relateds = self::getInverseEntityRelations($called, NULL, ['e.id']);
+        foreach ($relateds as $related) {
+            $ancestors = self::getAncestors($related, ['e.id']);
+            if (!empty($ancestors)) {
+                DB::table('entities')->whereIn('id', $ancestors)
+                    ->increment('tree_version');
+                DB::table('entities')->whereIn('id', $ancestors)
+                    ->increment('full_version');
+            }
+        }
+        // Now update the relation_version of the caller entity
+        if (!empty($relateds)) {
+            DB::table('entities')->whereIn('id', $relateds)
+                ->where('id', $caller)
+                ->increment('relations_version');
+        }
     }
 }

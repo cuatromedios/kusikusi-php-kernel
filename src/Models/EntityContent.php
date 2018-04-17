@@ -4,7 +4,7 @@ namespace Cuatromedios\Kusikusi\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class Content extends Model
+class EntityContent extends Model
 {
     /**
      * The table associated with the model.
@@ -37,7 +37,7 @@ class Content extends Model
      */
     public function entity()
     {
-        return $this->belongsTo('App\Models\Entity');
+        return $this->belongsTo('Cuatromedios\Kusikusi\Models\Entity');
     }
 
     /**
