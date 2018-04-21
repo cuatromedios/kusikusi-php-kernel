@@ -45,13 +45,17 @@ class WebController extends Controller
             ->leftJoin('entities as e', ["c.entity_id" => "e.id"])
             ->select('e.id', 'e.model', 'c.lang')
             ->first();
-        var_dump($entityInfo);
         $entity = Entity::getOne($entityInfo->id, [], $entityInfo->lang);
         $method_name = $entity->model;
-        if (method_exists($this, $method_name)) {
-            return($this->$method_name($request, $entity));
+        $controllerClassName = ucfirst($format).'Controller';
+        require_once(base_path('app/Controllers/Web/'.$controllerClassName.".php"));
+        $controller = new \app\Controllers\Web\HtmlController;
+        if (method_exists($controller, $method_name)) {
+            return($controller->$method_name($request, $entity));
         } else {
-            return("Error method controller not found");
+            //TODO: Send 404 or what the controller sends as 404 (for example a json error)
+            //TODO: Hide sensitive data if not in debug mode?
+            return("Error: method '".$method_name."' not found in app/Controllers/Web/".$controllerClassName);
         }
     }
 }
