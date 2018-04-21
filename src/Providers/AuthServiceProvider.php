@@ -38,7 +38,7 @@ class AuthServiceProvider extends ServiceProvider
     {
 
         Gate::define(self::GET_ENTITY, function ($user, $entity_id, $subaction = NULL, $metadata = NULL) {
-            $entity = Entity::where("id", $entity_id)->firstOrFail();
+            $entity = Entity::where("id", $entity_id)->withTrashed()->firstOrFail();
             foreach ($user->permissions as $permission) {
                 $isSelfOrDescendant = Entity::isSelfOrDescendant($entity_id, $permission->entity_id);
                 if ($isSelfOrDescendant && ($permission->get === Permission::ANY || ($permission->get === Permission::OWN && $entity->created_by === $user->entity_id))) {
@@ -60,7 +60,7 @@ class AuthServiceProvider extends ServiceProvider
             return false;
         });
         Gate::define(self::POST_ENTITY, function ($user, $entity_id, $subaction = NULL, $metadata = NULL) {
-            $entity = Entity::where("id", $entity_id)->firstOrFail();
+            $entity = Entity::where("id", $entity_id)->withTrashed()->firstOrFail();
             foreach ($user->permissions as $permission) {
                 $isSelfOrDescendant = Entity::isSelfOrDescendant($entity_id, $permission->entity_id);
                 if ($isSelfOrDescendant && ($permission->post === Permission::ANY || ($permission->post === Permission::OWN && $entity->created_by === $user->entity_id))) {
@@ -72,7 +72,7 @@ class AuthServiceProvider extends ServiceProvider
             return false;
         });
         Gate::define(self::PATCH_ENTITY, function ($user, $entity_id, $subaction = NULL, $metadata = NULL) {
-            $entity = Entity::where("id", $entity_id)->firstOrFail();
+            $entity = Entity::where("id", $entity_id)->withTrashed()->firstOrFail();
             foreach ($user->permissions as $permission) {
                 $isSelfOrDescendant = Entity::isSelfOrDescendant($entity_id, $permission->entity_id);
                 if ($isSelfOrDescendant && ($permission->patch === Permission::ANY || ($permission->patch === Permission::OWN && $entity->created_by === $user->entity_id))) {
@@ -84,7 +84,7 @@ class AuthServiceProvider extends ServiceProvider
             return false;
         });
         Gate::define(self::DELETE_ENTITY, function ($user, $entity_id, $subaction = NULL, $metadata = NULL) {
-            $entity = Entity::where("id", $entity_id)->firstOrFail();
+            $entity = Entity::where("id", $entity_id)->withTrashed()->firstOrFail();
             foreach ($user->permissions as $permission) {
                 $isSelfOrDescendant = Entity::isSelfOrDescendant($entity_id, $permission->entity_id);
                 if ($isSelfOrDescendant && ($permission->delete === Permission::ANY || ($permission->delete === Permission::OWN && $entity->created_by === $user->entity_id))) {
