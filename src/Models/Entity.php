@@ -383,11 +383,11 @@ class Entity extends Model
         // TODO: look for a more efficient way to make this, We cannot make a 'with' to get the related data because every row may be a different model. Is there a way to make this Eloquent way?
         // Join tables based on requested fields, both for contents and data models.
 
-        if (count($fields) === 0) {
+        if (is_array($fields) && count($fields) === 0) {
             $fields = ['entities.*', 'data.*', 'contents.*'];
         }
 
-        if (count($fields) > 0) {
+        if (is_array($fields) && count($fields) > 0) {
             // TODO: Check if the requested fields are valid for the model
             // TODO: Orders are not taken in account if fields does not exist, is that ok?
             $fieldsForSelect = [];
