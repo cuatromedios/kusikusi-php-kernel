@@ -301,7 +301,7 @@ class Entity extends Model
 
     public static function hardDelete($id)
     {
-        $entity = Entity::where("id", $id)->firstOrFail();
+        $entity = Entity::where("id", $id)->withTrashed()->firstOrFail();
         $modelClass =  Entity::getDataClass($entity['model']);
         if (count($modelClass::$dataFields) > 0 && isset($entity['data'])) {
             $modelClass::destroy($id);
@@ -311,6 +311,8 @@ class Entity extends Model
             $entity->forceDelete();
             Entity::updateEntityVersion($id);
         }
+        DB::table('relations')->where('entity_caller_id', $id)->delete();
+        DB::table('relations')->where('entity_called_id', $id)->delete();
         return ['id' => $entity['id']];
     }
 
@@ -381,11 +383,11 @@ class Entity extends Model
         // TODO: look for a more efficient way to make this, We cannot make a 'with' to get the related data because every row may be a different model. Is there a way to make this Eloquent way?
         // Join tables based on requested fields, both for contents and data models.
 
-        if (count($fields) === 0) {
-            $fields = ['entities.*', 'data.*', 'contents.*', 'relations.*'];
+        if (is_array($fields) && count($fields) === 0) {
+            $fields = ['entities.*', 'data.*', 'contents.*'];
         }
 
-        if (count($fields) > 0) {
+        if (is_array($fields) && count($fields) > 0) {
             // TODO: Check if the requested fields are valid for the model
             // TODO: Orders are not taken in account if fields does not exist, is that ok?
             $fieldsForSelect = [];
@@ -414,7 +416,6 @@ class Entity extends Model
                             case 'relations':
                             case 'relation':
                             case 'r':
-                                // Entity fields doesn't need to be joined, just the fiels to be selected
                                 if ($groupField === '*') {
                                     $relationFields = ['kind', 'position', 'tags', 'depth'];
                                     foreach ($relationFields as $relationField) {
@@ -695,7 +696,7 @@ class Entity extends Model
      */
     public static function isDescendant($id1, $id2)
     {
-        $ancestors = Entity::getAncestors($id1, NULL, NULL, ['r.depth:asc']);
+        $ancestors = Entity::getAncestors($id1, ['e.id'], NULL, ['r.depth:asc']);
         foreach ($ancestors as $ancestor) {
             if ($ancestor['id'] === $id2) {
                 return true;
@@ -807,9 +808,8 @@ class Entity extends Model
             }
 
             // Auto populate the model field
-            // TODO: This error does not get caught in the Controller and is not friendly reported to the user
             if (!isset($model['model'])) {
-                throw new \Error('A model name is requiered', ApiResponse::STATUS_BADREQUEST);
+                throw new \Exception('A model name is requiered', ApiResponse::STATUS_BADREQUEST);
             }
 
             //TODO: Check if the parent allows this model as a children

@@ -55,6 +55,10 @@ class EntityController extends Controller
     {
         try {
             // TODO: Filter the json to delete al not used data
+            $body = $request->json()->all();
+            if (!isset($body['parent'])) {
+                return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_BADREQUEST . ': No parent parameter', ApiResponse::STATUS_BADREQUEST))->response();
+            }
             if (Gate::allows('post-entity', [$request->parent]) === true) {
                 $entityPostedId = Entity::post($request->json()->all());
                 return (new ApiResponse($entityPostedId, TRUE))->response();
