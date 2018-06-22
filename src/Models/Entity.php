@@ -386,7 +386,9 @@ class Entity extends Model
         if (is_array($fields) && count($fields) === 0) {
             $fields = ['entities.*', 'data.*', 'contents.*'];
         }
-
+        if (!is_array($fields)) {
+            $fields = explode(',', $fields);
+        }
         if (is_array($fields) && count($fields) > 0) {
             // TODO: Check if the requested fields are valid for the model
             // TODO: Orders are not taken in account if fields does not exist, is that ok?
