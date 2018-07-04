@@ -3,6 +3,7 @@
 namespace Cuatromedios\Kusikusi\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 
 class Permission extends Model
 {
@@ -58,4 +59,37 @@ class Permission extends Model
      */
     protected $hidden = [];
 
+    /**
+     * Get permissions.
+     *
+     * @param $id
+     * @return \Illuminate\Http\JsonResponse|array
+     */
+    public static function getPermissions($id) {
+        $user = DB::table('permissions')->where('user_id', $id)->get();
+        return $user;
+    }
+
+    /**
+     * Post permissions.
+     *
+     * @param $information
+     * @return \Illuminate\Http\JsonResponse|array
+     */
+    public static function postPermissions($information) {
+        $user = Permission::create($information);
+        return $user;
+    }
+
+    /**
+     * Patch permissions.
+     *
+     * @param $id, $information
+     * @return \Illuminate\Http\JsonResponse|array
+     */
+    public static function patchPermissions($id, $information) {
+        $user = Permission::where("user_id", $id)->firstOrFail();
+        $user->update($information);
+        return $user;
+    }
 }
