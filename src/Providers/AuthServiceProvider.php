@@ -109,8 +109,8 @@ class AuthServiceProvider extends ServiceProvider
                     $query->where('token', '=', $key);
                 })->first();
                 if(!empty($user)){
-                    $request->request->add(['user_id' => $user->entity_id]);
-                    $request->request->add(['user_profile' => $user->profile]);
+//                    $request->request->add(['user_id' => $user->entity_id]);
+//                    $request->request->add(['user_profile' => $user->profile]);
                 }
                 return $user;
             } else {

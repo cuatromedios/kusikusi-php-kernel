@@ -19,6 +19,8 @@ class Permission extends Model
      */
     protected $table = 'permissions';
 
+    protected $primaryKey = 'user_id';
+
 
     /**
      * Indicates if the IDs are auto-incrementing.
@@ -66,7 +68,8 @@ class Permission extends Model
      * @return \Illuminate\Http\JsonResponse|array
      */
     public static function getPermissions($id) {
-        $user = DB::table('permissions')->where('user_id', $id)->get();
+        $user = Permission::where('user_id', $id)->firstOrFail();
+        $user->get();
         return $user;
     }
 
@@ -84,11 +87,11 @@ class Permission extends Model
     /**
      * Patch permissions.
      *
-     * @param $id, $information
+     * @param $user_id, $information
      * @return \Illuminate\Http\JsonResponse|array
      */
-    public static function patchPermissions($id, $information) {
-        $user = Permission::where("user_id", $id)->firstOrFail();
+    public static function patchPermissions($user_id, $information) {
+        $user = Permission::where('user_id', $user_id)->firstOrFail();
         $user->update($information);
         return $user;
     }
