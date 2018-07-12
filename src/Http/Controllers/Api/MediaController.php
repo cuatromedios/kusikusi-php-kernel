@@ -11,6 +11,7 @@ use Illuminate\Support\Facades\Gate;
 use Intervention\Image\Facades\Image;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class MediaController extends Controller
 {
@@ -23,6 +24,7 @@ class MediaController extends Controller
     {
         //
     }
+
     /**
      * Create the specified media, it's all equal that post entity, but this forces the parent to be the Media Container.
      *
@@ -67,19 +69,22 @@ class MediaController extends Controller
                 return (new ApiResponse(NULL, FALSE, 'Media ' . ApiResponse::TEXT_NOTFOUND, ApiResponse::STATUS_NOTFOUND))->response();
             }
             if (Gate::allows('patch-entity', $id) === true) {
-                function processFile($id, $function, $file) {
+                function processFile($id, $function, $file)
+                {
+                    $fileRead = $file->getClientOriginalExtension() ? $file->getClientOriginalExtension() : $file->guessClientExtension();
+                    $format = $fileRead == 'jpeg' ? 'jpg': 'jpg';
                     $data = [
                         'id' => $id,
-                        // TODO: Read extensions and make changes (jpeg = jpg ...)
-                        'format' => $file->getClientOriginalExtension() ? $file->getClientOriginalExtension() : $file->guessClientExtension(),
+                        'format' => $format,
                         'size' => $file->getClientSize(),
                         'function' => $function
                     ];
-                    $storageFileName = $function . '.' . $data['format'] ;
+                    $storageFileName = $function . '.' . $data['format'];
                     Storage::disk('media_original')->putFileAs($id, $file, $storageFileName);
                     Storage::disk('media_processed')->deleteDirectory($id);
                     return $data;
                 }
+
                 $data = NULL;
                 if ($request->hasFile('thumb') && $request->file('thumb')->isValid()) {
                     $data = processFile($id, 'thumb', $request->file('thumb'));
@@ -94,6 +99,29 @@ class MediaController extends Controller
                 }
                 return (new ApiResponse($data, TRUE))->response();
 
+            } else {
+                return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+            }
+        } catch (\Exception $e) {
+            $exceptionDetails = ExceptionDetails::filter($e);
+            return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
+        }
+    }
+
+    public function delete($id)
+    {
+        try {
+            try {
+                $entity = Entity::getOne($id);
+            } catch (\Exception $e) {
+                return (new ApiResponse(NULL, FALSE, 'Media ' . ApiResponse::TEXT_NOTFOUND, ApiResponse::STATUS_NOTFOUND))->response();
+            }
+            if (Gate::allows('delete-entity', $id) === true) {
+                $deletedMedia = DB::table('media')->where('entity_id', $id);
+                $deletedMedia->delete();
+                Storage::disk('media_original')->deleteDirectory($id);
+                Storage::disk('media_processed')->deleteDirectory($id);
+                return (new ApiResponse($entity['id'], TRUE))->response();
             } else {
                 return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
             }

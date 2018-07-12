@@ -76,7 +76,7 @@ class MediaController extends Controller
         data_fill($presetSettings, 'alignment', 'center'); // only if scale is 'cover' or 'contain' with background: top-left | top | top-right | left | center | right | bottom-left | bottom | bottom-right
         data_fill($presetSettings, 'background', 'crop'); // only if scale is 'contain': crop | #HEXCODE
         data_fill($presetSettings, 'quality', 80); // 0 - 100 for jpg | 1 - 8, (bits) for gif | 1 - 8, 24 (bits) for png
-        data_fill($presetSettings, 'format', 'jpg'); // jpng | gif | png
+        data_fill($presetSettings, 'format', 'jpg'); // jpg | gif | png
         data_fill($presetSettings, 'effects', []); // ['colorize' => [50, 0, 0], 'grayscale' => [] ]
 
 
