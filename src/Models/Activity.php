@@ -48,7 +48,7 @@ class Activity extends Model
 
     public static function add($user_id, $entity_id, $action, $isSuccess = TRUE, $subaction = NULL, $metadata = NULL)
     {
-        if (Config::get('activity.log.'.$action, FALSE) && ($isSuccess || ($isSuccess === FALSE && Config::get('activity.log.unauthorized', FALSE)))) {
+        if (Config::get('activity.log.'.$action, FALSE) && ($isSuccess || ($isSuccess === FALSE && Config::get('activity.log.error', FALSE)))) {
             Activity::create([
                 "user_id" => $user_id,
                 "entity_id" => $entity_id,

@@ -49,7 +49,7 @@ class Permission extends Model
      * @var array
      */
     protected $fillable = [
-        'user_id', 'entity_id', 'get', 'post', 'patch', 'delete'
+        'user_id', 'entity_id', 'read', 'write'
     ];
 
 

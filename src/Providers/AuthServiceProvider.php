@@ -13,11 +13,10 @@ use Cuatromedios\Kusikusi\Models\Activity;
 class AuthServiceProvider extends ServiceProvider
 {
 
-    const GET_ENTITY = 'get-entity';
-    const GET_ALL = 'get-all';
-    const POST_ENTITY = 'post-entity';
-    const PATCH_ENTITY = 'patch-entity';
-    const DELETE_ENTITY = 'delete-entity';
+    const READ_ENTITY = 'read-entity';
+    const READ_ALL = 'read-all';
+    const WRITE_ENTITY = 'write-entity';
+
 
     /**
      * Register any application services.
@@ -36,63 +35,36 @@ class AuthServiceProvider extends ServiceProvider
      */
     public function boot()
     {
-
-        Gate::define(self::GET_ENTITY, function ($user, $entity_id, $subaction = NULL, $metadata = NULL) {
+        // New permissions: read and write
+        Gate::define(self::READ_ENTITY, function ($user, $entity_id, $subaction = NULL, $metadata = NULL) {
             $entity = Entity::where("id", $entity_id)->withTrashed()->firstOrFail();
             foreach ($user->permissions as $permission) {
                 $isSelfOrDescendant = Entity::isSelfOrDescendant($entity_id, $permission->entity_id);
-                if ($isSelfOrDescendant && ($permission->get === Permission::ANY || ($permission->get === Permission::OWN && $entity->created_by === $user->entity_id))) {
-                    Activity::add($user->entity_id, $entity_id, self::GET_ENTITY, TRUE, $subaction, $metadata);
+                if ($isSelfOrDescendant && ($permission->read === Permission::ANY || ($permission->read === Permission::OWN && $entity->created_by === $user->entity_id))) {
                     return true;
                 }
             }
-            Activity::add($user->entity_id, $entity_id, self::GET_ENTITY, FALSE, $subaction, $metadata);
+            Activity::add($user->entity_id, $entity_id, self::READ_ENTITY, FALSE, $subaction, $metadata);
             return false;
         });
-        Gate::define(self::GET_ALL, function ($user, $subaction = NULL, $metadata = NULL) {
+        Gate::define(self::READ_ALL, function ($user, $subaction = NULL, $metadata = NULL) {
             foreach ($user->permissions as $permission) {
-                if ($permission->get === Permission::ANY && $permission->entity_id === 'root') {
-                    Activity::add($user->entity_id, '', self::GET_ALL, TRUE, $subaction, $metadata);
+                if ($permission->read === Permission::ANY && $permission->entity_id === 'root') {
                     return true;
                 }
             }
-            Activity::add($user->entity_id, '', self::GET_ALL, FALSE, $subaction, $metadata);
+            Activity::add($user->entity_id, '', self::READ_ALL, FALSE, $subaction, $metadata);
             return false;
         });
-        Gate::define(self::POST_ENTITY, function ($user, $entity_id, $subaction = NULL, $metadata = NULL) {
+        Gate::define(self::WRITE_ENTITY, function ($user, $entity_id, $subaction = NULL, $metadata = NULL) {
             $entity = Entity::where("id", $entity_id)->withTrashed()->firstOrFail();
             foreach ($user->permissions as $permission) {
                 $isSelfOrDescendant = Entity::isSelfOrDescendant($entity_id, $permission->entity_id);
-                if ($isSelfOrDescendant && ($permission->post === Permission::ANY || ($permission->post === Permission::OWN && $entity->created_by === $user->entity_id))) {
-                    Activity::add($user->entity_id, $entity_id, self::POST_ENTITY, TRUE, $subaction, $metadata);
+                if ($isSelfOrDescendant && ($permission->write === Permission::ANY || ($permission->write === Permission::OWN && $entity->created_by === $user->entity_id))) {
                     return true;
                 }
             }
-            Activity::add($user->entity_id, $entity_id, self::POST_ENTITY, FALSE, $subaction, $metadata);
-            return false;
-        });
-        Gate::define(self::PATCH_ENTITY, function ($user, $entity_id, $subaction = NULL, $metadata = NULL) {
-            $entity = Entity::where("id", $entity_id)->withTrashed()->firstOrFail();
-            foreach ($user->permissions as $permission) {
-                $isSelfOrDescendant = Entity::isSelfOrDescendant($entity_id, $permission->entity_id);
-                if ($isSelfOrDescendant && ($permission->patch === Permission::ANY || ($permission->patch === Permission::OWN && $entity->created_by === $user->entity_id))) {
-                    Activity::add($user->entity_id, $entity_id, self::PATCH_ENTITY, TRUE, $subaction, $metadata);
-                    return true;
-                }
-            }
-            Activity::add($user->entity_id, $entity_id, self::PATCH_ENTITY, FALSE, $subaction, $metadata);
-            return false;
-        });
-        Gate::define(self::DELETE_ENTITY, function ($user, $entity_id, $subaction = NULL, $metadata = NULL) {
-            $entity = Entity::where("id", $entity_id)->withTrashed()->firstOrFail();
-            foreach ($user->permissions as $permission) {
-                $isSelfOrDescendant = Entity::isSelfOrDescendant($entity_id, $permission->entity_id);
-                if ($isSelfOrDescendant && ($permission->delete === Permission::ANY || ($permission->delete === Permission::OWN && $entity->created_by === $user->entity_id))) {
-                    Activity::add($user->entity_id, $entity_id, self::DELETE_ENTITY, TRUE, $subaction, $metadata);
-                    return true;
-                }
-            }
-            Activity::add($user->entity_id, $entity_id, self::DELETE_ENTITY, FALSE, $subaction, $metadata);
+            Activity::add($user->entity_id, $entity_id, self::WRITE_ENTITY, FALSE, $subaction, $metadata);
             return false;
         });
 
