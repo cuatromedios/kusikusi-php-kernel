@@ -12,6 +12,8 @@ use Intervention\Image\Facades\Image;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Cuatromedios\Kusikusi\Providers\AuthServiceProvider;
+use Cuatromedios\Kusikusi\Models\Activity;
 
 class MediaController extends Controller
 {
@@ -42,14 +44,17 @@ class MediaController extends Controller
             if (!isset($information['model'])) {
                 $information['model'] = 'medium';
             }
-            if (Gate::allows('post-entity', $information['parent']) === true) {
+            if (Gate::allows(AuthServiceProvider::WRITE_ENTITY, $information['parent']) === true) {
                 $entityPostedId = Entity::post($request->json()->all());
+                Activity::add(\Auth::user()['entity_id'], $entityPostedId['id'], AuthServiceProvider::WRITE_ENTITY, TRUE, 'post', json_encode(["body" => $information]));
                 return (new ApiResponse($entityPostedId, TRUE))->response();
             } else {
+                Activity::add(\Auth::user()['entity_id'], '', AuthServiceProvider::WRITE_ENTITY, FALSE, 'post', json_encode(["body" => $information, "error" => ApiResponse::TEXT_FORBIDDEN]));
                 return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
             }
         } catch (\Exception $e) {
             $exceptionDetails = ExceptionDetails::filter($e);
+            Activity::add(\Auth::user()['entity_id'], '', AuthServiceProvider::WRITE_ENTITY, FALSE, 'post', json_encode(["body" => $information, "error" => $exceptionDetails['info']]));
             return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
         }
     }
@@ -66,13 +71,14 @@ class MediaController extends Controller
             try {
                 $entity = Entity::getOne($id);
             } catch (\Exception $e) {
+                Activity::add(\Auth::user()['entity_id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => ApiResponse::TEXT_NOTFOUND]));
                 return (new ApiResponse(NULL, FALSE, 'Media ' . ApiResponse::TEXT_NOTFOUND, ApiResponse::STATUS_NOTFOUND))->response();
             }
-            if (Gate::allows('patch-entity', $id) === true) {
+            if (Gate::allows(AuthServiceProvider::WRITE_ENTITY, [$id]) === true) {
                 function processFile($id, $function, $file)
                 {
                     $fileRead = $file->getClientOriginalExtension() ? $file->getClientOriginalExtension() : $file->guessClientExtension();
-                    $format = $fileRead == 'jpeg' ? 'jpg': 'jpg';
+                    $format = $fileRead == 'jpeg' ? 'jpg': $fileRead;
                     $data = [
                         'id' => $id,
                         'format' => $format,
@@ -95,15 +101,19 @@ class MediaController extends Controller
                     $entity->save();
                 }
                 if (NULL === $data) {
+                    Activity::add(\Auth::user()['entity_id'], $id, AuthServiceProvider::WRITE_ENTITY, FALSE, 'post', json_encode(["body" => $data, "error" => ApiResponse::TEXT_BADREQUEST]));
                     return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_BADREQUEST, ApiResponse::STATUS_BADREQUEST))->response();
                 }
+                Activity::add(\Auth::user()['entity_id'], $id, AuthServiceProvider::WRITE_ENTITY, TRUE, 'post', json_encode(["body" => $data]));
                 return (new ApiResponse($data, TRUE))->response();
 
             } else {
+                Activity::add(\Auth::user()['entity_id'], $id, AuthServiceProvider::WRITE_ENTITY, FALSE, 'post', json_encode(["error" => ApiResponse::TEXT_FORBIDDEN]));
                 return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
             }
         } catch (\Exception $e) {
             $exceptionDetails = ExceptionDetails::filter($e);
+            Activity::add(\Auth::user()['entity_id'], $id, AuthServiceProvider::WRITE_ENTITY, FALSE, 'post', json_encode(["body" => $data, "error" => $exceptionDetails['info']]));
             return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
         }
     }
@@ -114,19 +124,23 @@ class MediaController extends Controller
             try {
                 $entity = Entity::getOne($id);
             } catch (\Exception $e) {
+                Activity::add(\Auth::user()['entity_id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => ApiResponse::TEXT_NOTFOUND]));
                 return (new ApiResponse(NULL, FALSE, 'Media ' . ApiResponse::TEXT_NOTFOUND, ApiResponse::STATUS_NOTFOUND))->response();
             }
-            if (Gate::allows('delete-entity', $id) === true) {
+            if (Gate::allows(AuthServiceProvider::WRITE_ENTITY, [$id]) === true) {
                 $deletedMedia = DB::table('media')->where('entity_id', $id);
                 $deletedMedia->delete();
                 Storage::disk('media_original')->deleteDirectory($id);
                 Storage::disk('media_processed')->deleteDirectory($id);
+                Activity::add(\Auth::user()['entity_id'], $id, AuthServiceProvider::WRITE_ENTITY, TRUE, 'hardDelete', '{}');
                 return (new ApiResponse($entity['id'], TRUE))->response();
             } else {
+                Activity::add(\Auth::user()['entity_id'], $id, AuthServiceProvider::WRITE_ENTITY, FALSE, 'hardDelete', json_encode(["error" => ApiResponse::TEXT_FORBIDDEN]));
                 return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
             }
         } catch (\Exception $e) {
             $exceptionDetails = ExceptionDetails::filter($e);
+            Activity::add(\Auth::user()['entity_id'], $id, AuthServiceProvider::WRITE_ENTITY, FALSE, 'hardDelete', json_encode(["error" => $exceptionDetails['info']]));
             return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
         }
     }
