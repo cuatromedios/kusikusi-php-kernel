@@ -19,6 +19,7 @@ class EntityData extends Model
      * The primary key
      */
     protected $primaryKey = 'entity_id';
+    public $incrementing = false;
 
 
     /**
