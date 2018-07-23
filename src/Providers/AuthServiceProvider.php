@@ -16,7 +16,7 @@ class AuthServiceProvider extends ServiceProvider
     const READ_ENTITY = 'read-entity';
     const READ_ALL = 'read-all';
     const WRITE_ENTITY = 'write-entity';
-
+    const LOGIN = 'login';
 
     /**
      * Register any application services.
