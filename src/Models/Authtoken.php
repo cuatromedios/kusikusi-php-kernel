@@ -38,7 +38,7 @@ class Authtoken extends Model
      */
     public function user()
     {
-        return $this->belongsTo('App\Models\Data\User', 'entity_id');
+        return $this->belongsTo('App\Models\Data\User', 'user_id');
     }
 
     /**
@@ -47,7 +47,7 @@ class Authtoken extends Model
      * @var array
      */
     protected $fillable = [
-        'entity_id', 'token', 'created_ip', 'updated_ip'
+        'user_id', 'token', 'created_ip', 'updated_ip'
     ];
 
 

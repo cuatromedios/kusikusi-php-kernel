@@ -40,7 +40,7 @@ class Permission extends Model
      */
     public function user()
     {
-        return $this->belongsTo('App\Models\Data\User', 'entity_id');
+        return $this->belongsTo('App\Models\Data\User', 'id');
     }
 
     /**

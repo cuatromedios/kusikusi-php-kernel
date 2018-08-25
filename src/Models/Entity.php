@@ -82,7 +82,7 @@ class Entity extends Model
     {
         $modelClass = Entity::getDataClass($this['model']);
         if ($modelClass && count($modelClass::$dataFields) > 0) {
-            return $this->hasOne($modelClass);
+            return $this->hasOne($modelClass, 'id');
         } else {
             return $this->hasOne('Cuatromedios\\Kusikusi\\Models\\Entity', 'id');
         }
@@ -156,6 +156,7 @@ class Entity extends Model
         }
 
         // ENTITY Fields
+
         $entity = Entity::where('id',$id)->select($groupedFields['entities'])->firstOrFail();
         $modelClass = Entity::getDataClass($entity['model']);
 
@@ -480,7 +481,7 @@ class Entity extends Model
                                                     }
                                                 }
                                                 if (!isset($alreadyJoinedDataTables[$pluralModelName])) {
-                                                    $query->leftJoin($pluralModelName, $pluralModelName.'.entity_id', '=', 'entities.id');
+                                                    $query->leftJoin($pluralModelName, $pluralModelName.'.id', '=', 'entities.id');
                                                     $alreadyJoinedDataTables[$pluralModelName] = TRUE;
                                                 }
                                             }
@@ -499,7 +500,7 @@ class Entity extends Model
                                                     }
                                                 }
                                                 if (!isset($alreadyJoinedDataTables[$pluralModelName])) {
-                                                    $query->leftJoin($pluralModelName, $pluralModelName.'.entity_id', '=', 'entities.id');
+                                                    $query->leftJoin($pluralModelName, $pluralModelName.'.id', '=', 'entities.id');
                                                     $alreadyJoinedDataTables[$pluralModelName] = TRUE;
                                                 }
                                             }
@@ -522,7 +523,7 @@ class Entity extends Model
                                         }
                                     }
                                     if (!isset($alreadyJoinedDataTables[$groupName])) {
-                                        $query->leftJoin($groupName, $groupName.'.entity_id', '=', 'entities.id');
+                                        $query->leftJoin($groupName, $groupName.'.id', '=', 'entities.id');
                                         $alreadyJoinedDataTables[$groupName] = TRUE;
                                     }
                                 }
@@ -901,13 +902,13 @@ class Entity extends Model
     public static function replaceData($model) {
         $modelClass =  Entity::getDataClass($model['model']);
         if (count($modelClass::$dataFields) > 0 && isset($model['data'])) {
-            $dataToInsert = ['entity_id' => $model['id']];
+            $dataToInsert = ['id' => $model['id']];
             foreach ($modelClass::$dataFields as $field) {
                 if (isset($model['data'][$field])) {
                     $dataToInsert[$field] = $model['data'][$field];
                 }
             }
-            $modelClass::updateOrCreate(['entity_id' => $model['id']], $dataToInsert);
+            $modelClass::updateOrCreate(['id' => $model['id']], $dataToInsert);
         };
         unset($model['data']);
         return $model;

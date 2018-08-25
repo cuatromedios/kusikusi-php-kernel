@@ -38,12 +38,12 @@ class MediaController extends Controller
         try {
             $entity = Entity::getOne($id);
         } catch (\Exception $e) {
-            Activity::add(\Auth::user()['entity_id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => ApiResponse::TEXT_NOTFOUND]));
+            Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => ApiResponse::TEXT_NOTFOUND]));
             return (new ApiResponse(NULL, FALSE, 'Media ' . ApiResponse::TEXT_NOTFOUND, ApiResponse::STATUS_NOTFOUND))->response();
         }
         $presetSettings = Config::get('media.presets.' . $preset, NULL);
         if (NULL === $presetSettings) {
-            Activity::add(\Auth::user()['entity_id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => 'Preset ' . ApiResponse::TEXT_NOTFOUND]));
+            Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => 'Preset ' . ApiResponse::TEXT_NOTFOUND]));
             return (new ApiResponse(NULL, FALSE, 'Preset ' . ApiResponse::TEXT_NOTFOUND, ApiResponse::STATUS_NOTFOUND))->response();
         }
 
@@ -60,7 +60,7 @@ class MediaController extends Controller
             );
         }
         if (!$exists = Storage::disk('media_original')->exists($originalFilePath)) {
-            Activity::add(\Auth::user()['entity_id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => 'Original media ' . ApiResponse::TEXT_NOTFOUND]));
+            Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => 'Original media ' . ApiResponse::TEXT_NOTFOUND]));
             return (new ApiResponse(NULL, FALSE, 'Original media ' . ApiResponse::TEXT_NOTFOUND, ApiResponse::STATUS_NOTFOUND))->response();
         }
         $filedata = Storage::disk('media_original')->get($originalFilePath);
@@ -106,7 +106,7 @@ class MediaController extends Controller
         $image->encode($presetSettings['format'], $presetSettings['quality']);
         Storage::disk('media_processed')->put($publicFilePath, $image);
 
-        Activity::add(\Auth::user()['entity_id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'get', '{}');
+        Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'get', '{}');
         return $image->response();
     }
 }

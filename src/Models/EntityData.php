@@ -18,7 +18,7 @@ class EntityData extends Model
     /**
      * The primary key
      */
-    protected $primaryKey = 'entity_id';
+    protected $primaryKey = 'id';
     public $incrementing = false;
 
 
@@ -34,7 +34,7 @@ class EntityData extends Model
      */
     public function entity()
     {
-        return $this->belongsTo('Cuatromedios\Kusikusi\Models\Entity');
+        return $this->belongsTo('Cuatromedios\Kusikusi\Models\Entity', 'id');
     }
 
     /**
