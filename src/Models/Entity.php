@@ -414,6 +414,9 @@ class Entity extends Model
       $fieldsArray = is_array($fields) ? $fields : explode(',', $fields);
       $contentIndex = 0;
       $alreadyJoinedDataTables = [];
+      $selectContents = false;
+      $selectData = false;
+      $selectRelations = false;
       foreach ($fieldsArray as $field) {
         $fieldParts = explode('.', $field);
         $groupName = trim($fieldParts[0]);
@@ -436,6 +439,7 @@ class Entity extends Model
               case 'relations':
               case 'relation':
               case 'r':
+                $selectRelations = true;
                 if ($groupField === '*') {
                   $relationFields = ['kind', 'position', 'tags', 'depth'];
                   foreach ($relationFields as $relationField) {
@@ -454,6 +458,7 @@ class Entity extends Model
               case 'content':
               case 'contents':
               case 'c':
+                $selectContents = true;
                 // Join contents table for every content field requested
                 if ($groupField === '*') {
                   $allContentFields = DB::table('contents')->select('field')->groupBy('field')->get();
@@ -486,6 +491,7 @@ class Entity extends Model
                 // Join a data model
                 // TODO: Do not try to join a data model that doesn't exist
                 // TODO: It seems there is a bug where data fields get duplicated in the SQL sentence
+                $selectData = true;
                 if ($groupName === 'd') {
                   $groupName = 'data';
                 }
@@ -577,6 +583,9 @@ class Entity extends Model
         } else if ($value !== null) {
           array_set($exploded_entity, $field, $value);
         }
+        if ($selectContents) { data_fill($exploded_entity, 'contents', []); }
+        if ($selectData) { data_fill($exploded_entity, 'data', []); }
+        if ($selectRelations) { data_fill($exploded_entity, 'relations', []); }
       }
       $exploded_collection[] = $exploded_entity;
     }
