@@ -12,6 +12,8 @@ use Illuminate\Support\Facades\Gate;
 use Intervention\Image\Facades\Image;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
+use Cuatromedios\Kusikusi\Models\Activity;
+use Cuatromedios\Kusikusi\Providers\AuthServiceProvider;
 
 class MediaController extends Controller
 {
