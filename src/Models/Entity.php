@@ -587,6 +587,12 @@ class Entity extends Model
         if ($selectData) { data_fill($exploded_entity, 'data', []); }
         if ($selectRelations) { data_fill($exploded_entity, 'relations', []); }
       }
+      foreach($fieldsForSelect as $field) {
+        $fieldParts = explode(" as ", $field);
+        if (count($fieldParts) > 1) {
+          data_fill($exploded_entity, $fieldParts[1], '');
+        }
+      }
       $exploded_collection[] = $exploded_entity;
     }
     return $exploded_collection;
