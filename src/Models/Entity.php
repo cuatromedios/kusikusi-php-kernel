@@ -198,6 +198,9 @@ class Entity extends Model
         foreach ($contentsList as $content) {
           $contents[$content['field']] = $content['value'];
         }
+        foreach($modelClass::$contentFields as $field) {
+          data_fill($contents, $field, '');
+        }
       }
       $entity['contents'] = $contents;
     }
