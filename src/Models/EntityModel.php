@@ -2,6 +2,7 @@
 
 namespace Cuatromedios\Kusikusi\Models;
 
+use App\Models\Entity;
 use Cuatromedios\Kusikusi\Models\Http\ApiResponse;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
@@ -10,12 +11,8 @@ use Ramsey\Uuid\Uuid;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
-class Entity extends Model
+class EntityModel extends KusikusiModel
 {
-
-  public static $entityFields = ['id', 'parent', 'model', 'active', 'created_by', 'updated_by', 'publicated_at', 'unpublicated_at'];
-  public static $contentFields = [];
-  public static $dataFields = [];
 
   /**
    * The table associated with the model.
@@ -30,11 +27,12 @@ class Entity extends Model
   protected $primaryKey = 'id';
 
   /**
-   * Indicates if the IDs are auto-incrementing.
+   * Indicates if the IDs are auto-incrementing and is not numeric.
    *
    * @var bool
    */
   public $incrementing = false;
+  public $keyType = "string";
 
   /**
    * The attributes that are not mass assignable.
@@ -42,7 +40,7 @@ class Entity extends Model
    * @var array
    */
   protected $guarded = [
-      'created_at', 'updated_at', 'deleted_at', 'entity_version', 'tree_version', 'relations_version', 'full_version'
+      'created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by', 'publicated_at', 'unpublicated_at', 'entity_version', 'tree_version', 'relations_version', 'full_version'
   ];
 
   /**
@@ -60,54 +58,30 @@ class Entity extends Model
   public $timestamps = true;
 
   /**
-   * Get the contents of the Entity.
+   * Scope a query to only include entities of a given modelId.
+   *
+   * @param  \Illuminate\Database\Eloquent\Builder $query
+   * @param  mixed $type
+   * @return \Illuminate\Database\Eloquent\Builder
    */
-  public function contents()
+  public function scopeOfModel($query, $modelId)
   {
-    return $this->hasMany('Cuatromedios\\Kusikusi\\Models\\EntityContent', 'entity_id');
+    return $query->where('model', $modelId);
   }
 
   /**
-   * Get the activity related to the Entity.
+   * Scope a query to only include published entities.
+   *
+   * @param  \Illuminate\Database\Eloquent\Builder $query
+   * @param  mixed $type
+   * @return \Illuminate\Database\Eloquent\Builder
    */
-  public function activity()
+  public function scopeIsPublished($query)
   {
-    return $this->hasMany('Cuatromedios\\Kusikusi\\Models\\Activity', 'entity_id');
+    return $query->where('isActive', 1)->where('publicated_at', '2000')->where('unpublicated_at', 2000)->where('deleted_at');
   }
 
-  /**
-   * Get the other models related.
-   */
-  public function data()
-  {
-    $modelClass = Entity::getDataClass($this['model']);
-    if ($modelClass && count($modelClass::$dataFields) > 0) {
-      return $this->hasOne($modelClass, 'id');
-    } else {
-      return $this->hasOne('Cuatromedios\\Kusikusi\\Models\\Entity', 'id');
-    }
-  }
 
-  /**
-   *  Return a class from a string
-   */
-  public static function getDataClass($modelName)
-  {
-    if ($modelName && $modelName != '') {
-      return ("App\\Models\\" . (ucfirst($modelName)));
-    } else {
-      return NULL;
-    }
-  }
-
-  /**
-   *  Return TRUE if the model has dataFields
-   */
-  public static function hasDataFields($modelName)
-  {
-    $modelClass = Entity::getDataClass($modelName);
-    return ($modelClass && count($modelClass::$dataFields) > 0);
-  }
 
   /**
    * Returns an entity.
@@ -115,6 +89,7 @@ class Entity extends Model
    * @param $id
    * @return \Illuminate\Http\JsonResponse|string
    */
+  /*
   public static function getOne($id, $fields = [], $lang = NULL)
   {
     $lang = isset($lang) ? $lang : Config::get('general.langs')[0];
@@ -160,8 +135,8 @@ class Entity extends Model
 
     // ENTITY Fields
 
-    $entity = Entity::where('id', $id)->select($groupedFields['entities'])->firstOrFail();
-    $modelClass = Entity::getDataClass($entity['model']);
+    $entity = EntityBase::where('id', $id)->select($groupedFields['entities'])->firstOrFail();
+    $modelClass = EntityBase::getDataClass($entity['model']);
 
     // DATA Fields
     if (count($groupedFields['data']) > 0 && count($modelClass::$dataFields) > 0) {
@@ -216,6 +191,7 @@ class Entity extends Model
 
     return $entity;
   }
+*/
 
   /**
    * Creates an entity.
@@ -223,12 +199,14 @@ class Entity extends Model
    * @param $information
    * @return \Illuminate\Http\JsonResponse|array
    */
+  /*
   public static function post($information)
   {
     //TODO: Sanitize the $information
-    $entity = Entity::create($information);
+    $entity = EntityBase::create($information);
     return ['id' => $entity['id']];
   }
+*/
 
   /**
    * Creates a relation.
@@ -237,11 +215,12 @@ class Entity extends Model
    * @param $information
    * @return \Illuminate\Http\JsonResponse|array
    */
+  /*
   public static function postRelation($id, $information)
   {
     //TODO: Sanitize the $information
     //TODO: Do not allow blank kind field
-    $entity = Entity::where("id", $id)->firstOrFail();
+    $entity = EntityBase::where("id", $id)->firstOrFail();
     if (!isset($information['kind'])) {
       $information['kind'] = 'relation';
     }
@@ -259,10 +238,10 @@ class Entity extends Model
     }
     $relation = DB::table('relations')->where(['entity_caller_id' => $id, 'entity_called_id' => $information['id'], 'kind' => $information['kind']])->delete();
     $entity->relations()->attach($information['id'], ['kind' => $information['kind'], 'position' => $information['position'], 'tags' => $information['tags'], 'depth' => $information['depth']]);
-    Entity::updateRelationVersion($id, $information['id']);
+    EntityBase::updateRelationVersion($id, $information['id']);
     return ['id' => $entity['id']];
   }
-
+*/
   /**
    * Deletes a relation.
    *
@@ -270,15 +249,17 @@ class Entity extends Model
    * @param $information
    * @return \Illuminate\Http\JsonResponse|array
    */
+  /*
   public static function deleteRelation($id, $called, $kind)
   {
     //TODO: Sanitize the $information
-    $entity = Entity::where("id", $id)->firstOrFail();
+    $entity = EntityBase::where("id", $id)->firstOrFail();
     $where = ['entity_caller_id' => $id, 'entity_called_id' => $called, 'kind' => $kind];
-    Entity::updateRelationVersion($id, $called);
+    EntityBase::updateRelationVersion($id, $called);
     $relation = DB::table('relations')->where($where)->delete();
     return ['id' => $entity['id']];
   }
+*/
 
   /**
    * Updates an entity.
@@ -286,13 +267,15 @@ class Entity extends Model
    * @param $information
    * @return \Illuminate\Http\JsonResponse|array
    */
+  /*
   public static function patch($id, $information)
   {
     //TODO: Sanitize the $information
-    $entity = Entity::where("id", $id)->firstOrFail();
+    $entity = EntityBase::where("id", $id)->firstOrFail();
     $entity->update($information);
     return ['id' => $entity['id']];
   }
+*/
 
   /**
    * Soft deletes an entity.
@@ -300,13 +283,14 @@ class Entity extends Model
    * @param $id
    * @return \Illuminate\Http\JsonResponse|array
    */
-
+/*
   public static function softDelete($id)
   {
-    $entity = Entity::destroy($id);
-    Entity::updateEntityVersion($id);
+    $entity = EntityBase::destroy($id);
+    EntityBase::updateEntityVersion($id);
     return ['id' => $entity['id']];
   }
+*/
 
   /**
    * Hard deletes an entity.
@@ -314,24 +298,24 @@ class Entity extends Model
    * @param $id
    * @return \Illuminate\Http\JsonResponse|array
    */
-
+/*
   public static function hardDelete($id)
   {
-    $entity = Entity::where("id", $id)->withTrashed()->firstOrFail();
-    $modelClass = Entity::getDataClass($entity['model']);
+    $entity = EntityBase::where("id", $id)->withTrashed()->firstOrFail();
+    $modelClass = EntityBase::getDataClass($entity['model']);
     if (count($modelClass::$dataFields) > 0 && isset($entity['data'])) {
       $modelClass::destroy($id);
       $entity->forceDelete();
-      Entity::updateEntityVersion($id);
+      EntityBase::updateEntityVersion($id);
     } else {
       $entity->forceDelete();
-      Entity::updateEntityVersion($id);
+      EntityBase::updateEntityVersion($id);
     }
     DB::table('relations')->where('entity_caller_id', $id)->delete();
     DB::table('relations')->where('entity_called_id', $id)->delete();
     return ['id' => $entity['id']];
   }
-
+*/
 
   /**
    * Returns an entity's parent.
@@ -339,13 +323,15 @@ class Entity extends Model
    * @param $id
    * @return \Illuminate\Http\JsonResponse|string
    */
+  /*
   public static function getParent($id, $fields = [], $lang = NULL)
   {
-    $entity = Entity::getOne($id);
-    $parent = Entity::getOne($entity->parent, $fields, $lang);
+    $entity = EntityBase::getOne($id);
+    $parent = EntityBase::getOne($entity->parent, $fields, $lang);
 
     return $parent;
   }
+*/
 
   /**
    * Get a list of entities.
@@ -356,6 +342,7 @@ class Entity extends Model
    * @param string $lang The name of the language for content fields or null. If null, default language will be taken.
    * @return Collection
    */
+  /*
   public static function get($query = NULL, $fields = [], $lang = NULL, $order = NULL, $filter = NULL)
   {
     if (!isset($query)) {
@@ -433,7 +420,7 @@ class Entity extends Model
               case 'entity':
               case 'entities':
               case 'e':
-                // Entity fields doesn't need to be joined, just the fields to be selected
+                // EntityBase fields doesn't need to be joined, just the fields to be selected
                 $fieldsForSelect[] = 'entities.' . $groupField;
                 if (isset($collapsedOrders['entities.' . $groupField])) {
                   $query->orderBy('entities.' . $groupField, $collapsedOrders['entities.' . $groupField]);
@@ -498,12 +485,12 @@ class Entity extends Model
                 if ($groupName === 'd') {
                   $groupName = 'data';
                 }
-                $modelClass = Entity::getDataClass(str_singular($groupName));
+                $modelClass = EntityBase::getDataClass(str_singular($groupName));
                 if ($groupName === 'data') {
                   $allDataModels = DB::table('entities')->select('model')->groupBy('model')->get();
                   if ($groupField === '*') {
                     foreach (array_pluck($allDataModels, 'model') as $modelName) {
-                      $modelClass = Entity::getDataClass(str_singular($modelName));
+                      $modelClass = EntityBase::getDataClass(str_singular($modelName));
                       $modelInstance = new $modelClass;
                       if (count($modelClass::$dataFields) > 0) {
                         $pluralModelName = $modelInstance->table ? $modelInstance->table : str_plural($modelName);
@@ -521,7 +508,7 @@ class Entity extends Model
                     }
                   } else {
                     foreach (array_pluck($allDataModels, 'model') as $modelName) {
-                      $modelClass = Entity::getDataClass(str_singular($modelName));
+                      $modelClass = EntityBase::getDataClass(str_singular($modelName));
                       $modelInstance = new $modelClass;
                       if (count($modelClass::$dataFields) > 0) {
                         $pluralModelName = $modelInstance->table ? $modelInstance->table : str_plural($modelName);
@@ -600,6 +587,7 @@ class Entity extends Model
     }
     return $exploded_collection;
   }
+*/
 
   /**
    * Get a list of children.
@@ -609,6 +597,7 @@ class Entity extends Model
    * @param string $lang The name of the language for content fields or null. If null, default language will be taken.
    * @return Collection
    */
+  /*
   public static function getChildren($id, $fields = [], $lang = NULL, $order = 'entities.created_at.desc', $filter = NULL)
   {
     $query = DB::table('entities');
@@ -619,8 +608,9 @@ class Entity extends Model
           // ->whereRaw('FIND_IN_SET("a",ar.tags)')
           ->where('ar.depth', '=', 1);
     });
-    return Entity::get($query, $fields, $lang, $order, $filter);
+    return EntityBase::get($query, $fields, $lang, $order, $filter);
   }
+*/
 
   /**
    * Get a list of ancestors.
@@ -630,6 +620,7 @@ class Entity extends Model
    * @param string $lang The name of the language for content fields or null. If null, default language will be taken.
    * @return Collection
    */
+  /*
   public static function getAncestors($id, $fields = [], $lang = NULL, $order = NULL)
   {
     if (NULL === $order) {
@@ -641,8 +632,9 @@ class Entity extends Model
               ->where('ar.entity_caller_id', '=', $id)
               ->where('ar.kind', '=', 'ancestor');
         });
-    return Entity::get($query, $fields, $lang, $order);
+    return EntityBase::get($query, $fields, $lang, $order);
   }
+*/
 
   /**
    * Returns an entity's ancestor of specific depth.
@@ -650,11 +642,14 @@ class Entity extends Model
    * @param $id
    * @return \Illuminate\Http\JsonResponse|string
    */
+  /*
   public static function getAncestor($id, $depth = 0, $fields = [], $lang = NULL)
   {
     $ancestor = DB::table('relations')->where(["entity_caller_id" => $id])->where(["kind" => "ancestor"])->where(["depth" => $depth])->select(["entity_called_id"])->get();
-    return Entity::getOne($ancestor[0]->entity_called_id, $fields, $lang);
+    return EntityBase::getOne($ancestor[0]->entity_called_id, $fields, $lang);
   }
+*/
+
 
   /**
    * Get a list of descendants.
@@ -665,6 +660,7 @@ class Entity extends Model
    * @param array $order The list of order sentences like ['contents.title:asc'].
    * @return Collection
    */
+  /*
   public static function getDescendants($id, $fields = [], $lang = NULL, $order = ['r.depth:asc'])
   {
     if (NULL === $order) {
@@ -676,8 +672,9 @@ class Entity extends Model
               ->where('ar.entity_called_id', '=', $id)
               ->where('ar.kind', '=', 'ancestor');
         });
-    return Entity::get($query, $fields, $lang, $order);
+    return EntityBase::get($query, $fields, $lang, $order);
   }
+*/
 
   /**
    * Get a list of relations the entity is calling (except ancestors).
@@ -688,6 +685,7 @@ class Entity extends Model
    * @param array $order The list of order sentences like ['contents.title:asc'].
    * @return Collection
    */
+  /*
   public static function getEntityRelations($id, $kind = NULL, $fields = [], $lang = NULL, $order = NULL)
   {
     if (NULL === $order) {
@@ -703,8 +701,9 @@ class Entity extends Model
     $query->leftJoin('entities', function ($join) use ($id) {
       $join->on('ar.entity_called_id', '=', 'entities.id');
     });
-    return Entity::get($query, $fields, $lang, $order);
+    return EntityBase::get($query, $fields, $lang, $order);
   }
+*/
 
   /**
    * Get a list of relations the entity is called.
@@ -715,6 +714,7 @@ class Entity extends Model
    * @param array $order The list of order sentences like ['contents.title:asc'].
    * @return Collection
    */
+  /*
   public static function getInverseEntityRelations($id, $kind = NULL, $fields = [], $lang = NULL, $order = NULL)
   {
     if (NULL === $order) {
@@ -730,8 +730,9 @@ class Entity extends Model
     $query->leftJoin('entities', function ($join) use ($id) {
       $join->on('ar.entity_caller_id', '=', 'entities.id');
     });
-    return Entity::get($query, $fields, $lang, $order);
+    return EntityBase::get($query, $fields, $lang, $order);
   }
+*/
 
   /**
    * Get true if an entity is descendant of another.
@@ -740,9 +741,10 @@ class Entity extends Model
    * @param string $id2 The id of the entity to know is an ancestor of
    * @return Boolean
    */
+  /*
   public static function isDescendant($id1, $id2)
   {
-    $ancestors = Entity::getAncestors($id1, ['e.id'], NULL, ['r.depth:asc']);
+    $ancestors = EntityBase::getAncestors($id1, ['e.id'], NULL, ['r.depth:asc']);
     foreach ($ancestors as $ancestor) {
       if ($ancestor['id'] === $id2) {
         return true;
@@ -750,6 +752,7 @@ class Entity extends Model
     }
     return false;
   }
+*/
 
   /**
    * Get true if an entity is descendant of another or itself.
@@ -758,26 +761,17 @@ class Entity extends Model
    * @param string $id2 The id of the entity to know is an ancestor of
    * @return Boolean
    */
+  /*
   public static function isSelfOrDescendant($id1, $id2)
   {
     if ($id1 === $id2) {
       return true;
     } else {
-      return Entity::isDescendant($id1, $id2);
+      return EntityBase::isDescendant($id1, $id2);
     }
   }
+*/
 
-  /**
-   * The relations that belong to the entity.
-   */
-  public function relations()
-  {
-    return $this->belongsToMany('Cuatromedios\Kusikusi\Models\Entity', 'relations', 'entity_caller_id', 'entity_called_id')
-        ->using('Cuatromedios\Kusikusi\Models\Relation')
-        ->as('relations')
-        ->withPivot('kind', 'position', 'tags')
-        ->withTimestamps();
-  }
 
 
   /**
@@ -785,14 +779,31 @@ class Entity extends Model
    *
    * @var bool
    */
-  public static function boot()
+
+  public static function boot($preset = [])
   {
+
     parent::boot();
 
+    self::creating(function ($model) {
+      if (!isset($model['model'])) {
+        throw new \Exception('A model id is requiered to create a new entity', ApiResponse::STATUS_BADREQUEST);
+      }
+    });
+
+    self::saving(function ($model) {
+      $model = EntityModel::replaceContent($model);
+    });
+
+    self::created(function ($model) {
+
+    });
+
+    /*
     self::updating(function ($model) {
       // TODO: Dont allow to change the model?
-      // Preprocess the model data if the data class has a method defined for that. (Data models does not extend Entity)
-      $modelClass = Entity::getDataClass($model['model']);
+      // Preprocess the model data if the data class has a method defined for that. (Data models does not extend EntityBase)
+      $modelClass = EntityBase::getDataClass($model['model']);
 
       // Use the user authenticated
       if (isset($model['user_id'])) {
@@ -802,10 +813,10 @@ class Entity extends Model
       unset($model['user_profile']);
 
       // Contents are sent to another table
-      $model = Entity::replaceContent($model);
+      $model = EntityBase::replaceContent($model);
 
       // Data are sent to specific table
-      $model = Entity::replaceData($model);
+      $model = EntityBase::replaceData($model);
 
       if (method_exists($modelClass, 'beforeSave')) {
         $model = $modelClass::beforeSave($model);
@@ -815,8 +826,7 @@ class Entity extends Model
       unset($model['parent']);
       // For reference this is the code used in previous versions of kusikusi, please note we may not need
       // to make a queue because we can now get the descendants ordered by depth:
-      /*
-       * $currentParent = $this->_properties['parent'];
+      $currentParent = $this->_properties['parent'];
               $entityQueue = array();
               array_push($entityQueue, $this);
               $index = 0;
@@ -842,26 +852,16 @@ class Entity extends Model
                       array_push($entityQueue, $child);
                   }
               }
-       */
-
     });
+    */
 
-    self::creating(function (Entity $model) {
-
-      // Auto populate the _id field
-      if (!isset($model['id'])) {
-        $model['id'] = Uuid::uuid4()->toString();
-      }
-
-      // Auto populate the model field
-      if (!isset($model['model'])) {
-        throw new \Exception('A model name is requiered', ApiResponse::STATUS_BADREQUEST);
-      }
+    /*
+    self::creating(function (EntityBase $model) {
 
       //TODO: Check if the parent allows this model as a children
 
-      // Preprocess the model data if the data class has a method defined for that. (Data models does not extend Entity)
-      $modelClass = Entity::getDataClass($model['model']);
+      // Preprocess the model data if the data class has a method defined for that. (Data models does not extend EntityBase)
+      $modelClass = EntityBase::getDataClass($model['model']);
 
       // Use the user authenticated
       if (isset($model['user_id'])) {
@@ -875,10 +875,10 @@ class Entity extends Model
       unset($model['relations']);
 
       // Contents are sent to another table
-      $model = Entity::replaceContent($model);
+      $model = EntityBase::replaceContent($model);
 
       // Data are sent to specific table
-      $model = Entity::replaceData($model);
+      $model = EntityBase::replaceData($model);
 
       if (method_exists($modelClass, 'beforeSave')) {
         $model = $modelClass::beforeSave($model);
@@ -887,18 +887,18 @@ class Entity extends Model
     });
 
 
-    self::saved(function (Entity $entity) {
+    self::saved(function (EntityBase $entity) {
       // Create the ancestors relations
       if (isset($entity['parent']) && $entity['parent'] != '') {
-        $parentEntity = Entity::find($entity['parent']);
+        $parentEntity = EntityBase::find($entity['parent']);
         $entity->relations()->attach($parentEntity['id'], ['kind' => 'ancestor', 'depth' => 1]);
         $ancestors = ($parentEntity->relations()->where('kind', 'ancestor')->orderBy('depth'))->get();
         for ($a = 0; $a < count($ancestors); $a++) {
           $entity->relations()->attach($ancestors[$a]['id'], ['kind' => 'ancestor', 'depth' => ($a + 2)]);
         }
       };
-      Entity::updateEntityVersion($entity['id']);
-    });
+      EntityBase::updateEntityVersion($entity['id']);
+    });*/
   }
 
   public static function replaceContent($model)
@@ -945,7 +945,7 @@ class Entity extends Model
 
   public static function replaceData($model)
   {
-    $modelClass = Entity::getDataClass($model['model']);
+    $modelClass = EntityBase::getDataClass($model['model']);
     if (count($modelClass::$dataFields) > 0 && isset($model['data'])) {
       $dataToInsert = ['id' => $model['id']];
       foreach ($modelClass::$dataFields as $field) {
@@ -1024,4 +1024,17 @@ class Entity extends Model
           ->increment('relations_version');
     }
   }
+
+  /**
+   *  Return a class from a string
+   */
+  public static function getClassFromModelId($modelId)
+  {
+    if (isset($modelId) && $modelId != '') {
+      return ("App\\Models\\" . (studly_case($modelId)));
+    } else {
+      return NULL;
+    }
+  }
+
 }

@@ -5,7 +5,7 @@ namespace Cuatromedios\Kusikusi\Http\Controllers\Media;
 use Cuatromedios\Kusikusi\Http\Controllers\Controller;
 use Cuatromedios\Kusikusi\Exceptions\ExceptionDetails;
 use Cuatromedios\Kusikusi\Models\Http\ApiResponse;
-use Cuatromedios\Kusikusi\Models\Entity;
+use Cuatromedios\Kusikusi\Models\EntityBase;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
@@ -38,7 +38,7 @@ class MediaController extends Controller
     {
         // TODO: Review if the user can read the media
         try {
-            $entity = Entity::getOne($id);
+            $entity = EntityBase::getOne($id);
         } catch (\Exception $e) {
             Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => ApiResponse::TEXT_NOTFOUND]));
             return (new ApiResponse(NULL, FALSE, 'Media ' . ApiResponse::TEXT_NOTFOUND, ApiResponse::STATUS_NOTFOUND))->response();

@@ -3,7 +3,7 @@
 namespace Cuatromedios\Kusikusi\Providers;
 
 use App\Models\User;
-use Cuatromedios\Kusikusi\Models\Entity;
+use Cuatromedios\Kusikusi\Models\EntityBase;
 use Cuatromedios\Kusikusi\Models\Permission;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
@@ -37,9 +37,9 @@ class AuthServiceProvider extends ServiceProvider
     {
         // New permissions: read and write
         Gate::define(self::READ_ENTITY, function ($user, $entity_id, $subaction = NULL, $metadata = NULL) {
-            $entity = Entity::where("id", $entity_id)->withTrashed()->firstOrFail();
+            $entity = EntityBase::where("id", $entity_id)->withTrashed()->firstOrFail();
             foreach ($user->permissions as $permission) {
-                $isSelfOrDescendant = Entity::isSelfOrDescendant($entity_id, $permission->entity_id);
+                $isSelfOrDescendant = EntityBase::isSelfOrDescendant($entity_id, $permission->entity_id);
                 if ($isSelfOrDescendant && ($permission->read === Permission::ANY || ($permission->read === Permission::OWN && $entity->created_by === $user->entity_id))) {
                     return true;
                 }
@@ -57,9 +57,9 @@ class AuthServiceProvider extends ServiceProvider
             return false;
         });
         Gate::define(self::WRITE_ENTITY, function ($user, $entity_id, $subaction = NULL, $metadata = NULL) {
-            $entity = Entity::where("id", $entity_id)->withTrashed()->firstOrFail();
+            $entity = EntityBase::where("id", $entity_id)->withTrashed()->firstOrFail();
             foreach ($user->permissions as $permission) {
-                $isSelfOrDescendant = Entity::isSelfOrDescendant($entity_id, $permission->entity_id);
+                $isSelfOrDescendant = EntityBase::isSelfOrDescendant($entity_id, $permission->entity_id);
                 if ($isSelfOrDescendant && ($permission->write === Permission::ANY || ($permission->write === Permission::OWN && $entity->created_by === $user->entity_id))) {
                     return true;
                 }

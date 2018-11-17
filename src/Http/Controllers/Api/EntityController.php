@@ -4,7 +4,7 @@ namespace Cuatromedios\Kusikusi\Http\Controllers\Api;
 
 use Cuatromedios\Kusikusi\Exceptions\ExceptionDetails;
 use Cuatromedios\Kusikusi\Http\Controllers\Controller;
-use Cuatromedios\Kusikusi\Models\Entity;
+use Cuatromedios\Kusikusi\Models\EntityBase;
 use Cuatromedios\Kusikusi\Providers\AuthServiceProvider;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -35,7 +35,7 @@ class EntityController extends Controller
         try {
             $lang = $request->input('lang', Config::get('general.langs')[0]);
             $fields = $request->input('fields', []);
-            $entity = Entity::getOne($id, $fields, $lang);
+            $entity = EntityBase::getOne($id, $fields, $lang);
             if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id])) {
                 Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getOne', "{}");
                 return (new ApiResponse($entity, TRUE))->response();
@@ -65,7 +65,7 @@ class EntityController extends Controller
                 return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_BADREQUEST . ': No parent parameter', ApiResponse::STATUS_BADREQUEST))->response();
             }
             if (Gate::allows(AuthServiceProvider::WRITE_ENTITY, [$request->parent]) === true) {
-                $entityPosted = Entity::post($request->json()->all());
+                $entityPosted = EntityBase::post($request->json()->all());
                 Activity::add(\Auth::user()['id'], $entityPosted['id'], AuthServiceProvider::WRITE_ENTITY, TRUE, 'post', json_encode(["body" => $body]));
                 return (new ApiResponse($entityPosted, TRUE))->response();
             } else {
@@ -91,7 +91,7 @@ class EntityController extends Controller
             // TODO: Filter the json to delete all not used data
             $body = $request->json()->all();
             if (Gate::allows(AuthServiceProvider::WRITE_ENTITY, [$id]) === true) {
-                $entityPatched = Entity::patch($id, $body);
+                $entityPatched = EntityBase::patch($id, $body);
                 Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, TRUE, 'patch', json_encode(["body" => $body]));
                 return (new ApiResponse($entityPatched, TRUE))->response();
             } else {
@@ -117,7 +117,7 @@ class EntityController extends Controller
     {
         try {
             if (Gate::allows(AuthServiceProvider::WRITE_ENTITY, [$id]) === true) {
-                $entitySoftDeleted = Entity::softDelete($id);
+                $entitySoftDeleted = EntityBase::softDelete($id);
                 Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, TRUE, 'softDelete', '{}');
                 return (new ApiResponse($entitySoftDeleted, TRUE))->response();
             } else {
@@ -142,7 +142,7 @@ class EntityController extends Controller
     {
         try {
             if (Gate::allows(AuthServiceProvider::WRITE_ENTITY, [$id]) === true) {
-                $entityHardDeleted = Entity::hardDelete($id);
+                $entityHardDeleted = EntityBase::hardDelete($id);
                 Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, TRUE, 'hardDelete', '{}');
                 return (new ApiResponse($entityHardDeleted, TRUE))->response();
             } else {
@@ -168,7 +168,7 @@ class EntityController extends Controller
         try {
             $lang = $request->input('lang', Config::get('general.langs')[0]);
             $fields = $request->input('fields', []);
-            $entity = Entity::getParent($id, $fields, $lang);
+            $entity = EntityBase::getParent($id, $fields, $lang);
             if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id])) {
                 Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getParent', "{}");
                 return (new ApiResponse($entity, TRUE))->response();
@@ -196,7 +196,7 @@ class EntityController extends Controller
             $lang = $request->input('lang', Config::get('general.langs')[0]);
             $order = $request->input('order', NULL);
             if (Gate::allows(AuthServiceProvider::READ_ALL)) {
-                $collection = Entity::get(NULL, $fields, $lang, $order);
+                $collection = EntityBase::get(NULL, $fields, $lang, $order);
                 Activity::add(\Auth::user()['id'], '', AuthServiceProvider::READ_ENTITY, TRUE, 'get', "{}");
                 return (new ApiResponse($collection, TRUE))->response();
             } else {
@@ -224,7 +224,7 @@ class EntityController extends Controller
             $order = $request->input('order', NULL);
             $filter = $request->input('filter', NULL);
             if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'children'])) {
-                $collection = Entity::getChildren($id, $fields, $lang, $order, $filter);
+                $collection = EntityBase::getChildren($id, $fields, $lang, $order, $filter);
                 Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getChildren', "{}");
                 return (new ApiResponse($collection, TRUE))->response();
             } else {
@@ -251,7 +251,7 @@ class EntityController extends Controller
             $lang = $request->input('lang', Config::get('general.langs')[0]);
             $order = $request->input('order', NULL);
             if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'ancestors'])) {
-                $collection = Entity::getAncestors($id, $fields, $lang, $order);
+                $collection = EntityBase::getAncestors($id, $fields, $lang, $order);
                 Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getAncestors', "{}");
                 return (new ApiResponse($collection, TRUE))->response();
             } else {
@@ -278,7 +278,7 @@ class EntityController extends Controller
             $lang = $request->input('lang', Config::get('general.langs')[0]);
             $order = $request->input('order', NULL);
             if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'descendants'])) {
-                $collection = Entity::getDescendants($id, $fields, $lang, $order);
+                $collection = EntityBase::getDescendants($id, $fields, $lang, $order);
                 Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getDescendants', "{}");
                 return (new ApiResponse($collection, TRUE))->response();
             } else {
@@ -305,7 +305,7 @@ class EntityController extends Controller
             $lang = $request->input('lang', Config::get('general.langs')[0]);
             $order = $request->input('order', NULL);
             if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'relations'])) {
-                $collection = Entity::getEntityRelations($id, $kind, $fields, $lang, $order);
+                $collection = EntityBase::getEntityRelations($id, $kind, $fields, $lang, $order);
                 Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getRelations', "{}");
                 return (new ApiResponse($collection, TRUE))->response();
             } else {
@@ -331,7 +331,7 @@ class EntityController extends Controller
             $lang = $request->input('lang', Config::get('general.langs')[0]);
             $order = $request->input('order', NULL);
             if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'inverse-relations'])) {
-                $collection = Entity::getInverseEntityRelations($id, $kind, $fields, $lang, $order);
+                $collection = EntityBase::getInverseEntityRelations($id, $kind, $fields, $lang, $order);
                 Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getInverseRelations', "{}");
                 return (new ApiResponse($collection, TRUE))->response();
             } else {
@@ -356,7 +356,7 @@ class EntityController extends Controller
             // TODO: Filter the json to delete al not used data
             $body = $request->json()->all();
             if (Gate::allows(AuthServiceProvider::WRITE_ENTITY, [$id, 'relation']) === true) {
-                $entityPosted = Entity::postRelation($id, $body);
+                $entityPosted = EntityBase::postRelation($id, $body);
                 Activity::add(\Auth::user()['id'], $entityPosted['id'], AuthServiceProvider::WRITE_ENTITY, TRUE, 'postRelation', json_encode(["body" => $body]));
                 return (new ApiResponse($entityPosted, TRUE))->response();
             } else {
@@ -380,7 +380,7 @@ class EntityController extends Controller
         try {
             // TODO: Filter the json to delete al not used data
             if (Gate::allows(AuthServiceProvider::WRITE_ENTITY, [$id, 'relation']) === true) {
-                $entityPostedId = Entity::deleteRelation($id, $called, $kind);
+                $entityPostedId = EntityBase::deleteRelation($id, $called, $kind);
                 Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, TRUE, 'deleteRelation', json_encode(["body" => ["called" => $called, "kind" => $kind]]));
                 return (new ApiResponse($entityPostedId, TRUE))->response();
             } else {

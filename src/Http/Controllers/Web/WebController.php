@@ -3,7 +3,7 @@
 namespace Cuatromedios\Kusikusi\Http\Controllers\Web;
 
 use Cuatromedios\Kusikusi\Http\Controllers\Controller;
-use Cuatromedios\Kusikusi\Models\Entity;
+use Cuatromedios\Kusikusi\Models\EntityBase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 
@@ -45,7 +45,7 @@ class WebController extends Controller
             ->leftJoin('entities as e', ["c.entity_id" => "e.id"])
             ->select('e.id', 'e.model', 'c.lang')
             ->first();
-        $entity = Entity::getOne($entityInfo->id, [], $entityInfo->lang);
+        $entity = EntityBase::getOne($entityInfo->id, [], $entityInfo->lang);
         $method_name = $entity->model;
         $controllerClassName = ucfirst($format).'Controller';
         require_once(base_path('app/Controllers/Web/'.$controllerClassName.".php"));

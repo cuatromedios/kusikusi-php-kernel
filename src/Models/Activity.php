@@ -39,11 +39,11 @@ class Activity extends Model
     }
 
     /**
-     * Get the Entity that owns the content.
+     * Get the EntityBase that owns the content.
      */
     public function entity()
     {
-        return $this->belongsTo('Cuatromedios\Kusikusi\Models\Entity', 'entity_id');
+        return $this->belongsTo('Cuatromedios\Kusikusi\Models\EntityBase', 'entity_id');
     }
 
     public static function add($user_id, $entity_id, $action, $isSuccess = TRUE, $subaction = NULL, $metadata = NULL)

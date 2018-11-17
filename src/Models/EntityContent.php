@@ -33,11 +33,11 @@ class EntityContent extends Model
     public $timestamps = false;
 
     /**
-     * Get the Entity that owns the content.
+     * Get the EntityBase that owns the content.
      */
     public function entity()
     {
-        return $this->belongsTo('Cuatromedios\Kusikusi\Models\Entity');
+        return $this->belongsTo('Cuatromedios\Kusikusi\Models\EntityBase');
     }
 
     /**

@@ -34,7 +34,7 @@ class Authtoken extends Model
     public $timestamps = true;
 
     /**
-     * Get the Entity that owns the content.
+     * Get the EntityBase that owns the content.
      */
     public function user()
     {

@@ -5,7 +5,7 @@ namespace Cuatromedios\Kusikusi\Http\Controllers\Api;
 use Cuatromedios\Kusikusi\Http\Controllers\Controller;
 use Cuatromedios\Kusikusi\Exceptions\ExceptionDetails;
 use Cuatromedios\Kusikusi\Models\Http\ApiResponse;
-use Cuatromedios\Kusikusi\Models\Entity;
+use Cuatromedios\Kusikusi\Models\EntityBase;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Intervention\Image\Facades\Image;
@@ -45,7 +45,7 @@ class MediaController extends Controller
                 $information['model'] = 'medium';
             }
             if (Gate::allows(AuthServiceProvider::WRITE_ENTITY, $information['parent']) === true) {
-                $entityPostedId = Entity::post($request->json()->all());
+                $entityPostedId = EntityBase::post($request->json()->all());
                 Activity::add(\Auth::user()['id'], $entityPostedId['id'], AuthServiceProvider::WRITE_ENTITY, TRUE, 'post', json_encode(["body" => $information]));
                 return (new ApiResponse($entityPostedId, TRUE))->response();
             } else {
@@ -69,7 +69,7 @@ class MediaController extends Controller
     {
         try {
             try {
-                $entity = Entity::getOne($id);
+                $entity = EntityBase::getOne($id);
             } catch (\Exception $e) {
                 Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => ApiResponse::TEXT_NOTFOUND]));
                 return (new ApiResponse(NULL, FALSE, 'Media ' . ApiResponse::TEXT_NOTFOUND, ApiResponse::STATUS_NOTFOUND))->response();
@@ -122,7 +122,7 @@ class MediaController extends Controller
     {
         try {
             try {
-                $entity = Entity::getOne($id);
+                $entity = EntityBase::getOne($id);
             } catch (\Exception $e) {
                 Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => ApiResponse::TEXT_NOTFOUND]));
                 return (new ApiResponse(NULL, FALSE, 'Media ' . ApiResponse::TEXT_NOTFOUND, ApiResponse::STATUS_NOTFOUND))->response();

@@ -36,7 +36,7 @@ class Permission extends Model
     public $timestamps = false;
 
     /**
-     * Get the Entity that owns the content.
+     * Get the EntityBase that owns the content.
      */
     public function user()
     {
