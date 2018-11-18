@@ -44,6 +44,14 @@ class EntityModel extends KusikusiModel
   ];
 
   /**
+   * Active attribute should be casted to boolean
+   * @var array
+   */
+  protected $casts = [
+      'active' => 'boolean'
+  ];
+
+  /**
    * The model should use soft deletes.
    *
    * @var array
@@ -78,7 +86,8 @@ class EntityModel extends KusikusiModel
    */
   public function scopeIsPublished($query)
   {
-    return $query->where('isActive', 1)->where('publicated_at', '2000')->where('unpublicated_at', 2000)->where('deleted_at');
+    //TODO: Check correctrly the dates
+    return $query->where('active', true)->where('publicated_at', '2000')->where('unpublicated_at', 2000)->where('deleted_at');
   }
 
 
@@ -796,7 +805,14 @@ class EntityModel extends KusikusiModel
     });
 
     self::created(function ($model) {
-
+      // Create the related model
+      /*$dataModelInfo = $model->toArray() ?? [];
+      unset($model['root']);
+      \App\Models\Root::firstOrCreate(
+          ["id" => $model['id']],
+          $dataModelInfo
+      );
+      */
     });
 
     /*
@@ -901,7 +917,7 @@ class EntityModel extends KusikusiModel
     });*/
   }
 
-  public static function replaceContent($model)
+  private static function replaceContent($model)
   {
     if (isset($model['contents'])) {
       $defaultLang = Config::get('general.langs')[0];
@@ -923,8 +939,6 @@ class EntityModel extends KusikusiModel
           ];
           $contentRowValue = ['value' => $rowOrFieldValue];
         }
-        // Content::updateOrCreate($contentRowKeys, $contentRowValue)->where($contentRowKeys);
-        // Content::where($contentRowKeys)->updateOrCreate($contentRowKeys, $contentRowValue);
         // TODO: Is there a better way to do this? updateOrCreate doesn't suppor multiple keys
         // TODO: Sanitize this but allow html content
         $param_id = filter_var($contentRowKeys['entity_id'], FILTER_SANITIZE_STRING);
@@ -943,7 +957,7 @@ class EntityModel extends KusikusiModel
     return $model;
   }
 
-  public static function replaceData($model)
+  private static function replaceData($model)
   {
     $modelClass = EntityBase::getDataClass($model['model']);
     if (count($modelClass::$dataFields) > 0 && isset($model['data'])) {
@@ -964,7 +978,7 @@ class EntityModel extends KusikusiModel
    * as well as it´s ancestors (and inverse relations)
    * @param $entity
    */
-  public static function updateEntityVersion($entity)
+  private static function updateEntityVersion($entity)
   {
     // Updates the version of the own entity and its full version as well
     DB::table('entities')->where('id', $entity)
@@ -1004,7 +1018,7 @@ class EntityModel extends KusikusiModel
    * @param $caller
    * @param $called
    */
-  public static function updateRelationVersion($caller, $called)
+  private static function updateRelationVersion($caller, $called)
   {
     // Update the tree and full version of the called entity (and it's ancestors)
     $relateds = self::getInverseEntityRelations($called, NULL, ['e.id']);
@@ -1028,7 +1042,7 @@ class EntityModel extends KusikusiModel
   /**
    *  Return a class from a string
    */
-  public static function getClassFromModelId($modelId)
+  private static function getClassFromModelId($modelId)
   {
     if (isset($modelId) && $modelId != '') {
       return ("App\\Models\\" . (studly_case($modelId)));

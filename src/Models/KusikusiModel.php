@@ -8,13 +8,26 @@ use Illuminate\Database\Eloquent\Model;
 class KusikusiModel extends Model
 {
 
+  protected $_id;
+
+  public function __construct(array $attributes = array())
+  {
+    if (!isset($attributes['id'])) {
+      $generatedId =  Uuid::uuid4()->toString();
+      $attributes['id'] = $generatedId;
+      $this->_id = $generatedId;
+    } else {
+      $this->_id = $attributes['id'];
+    }
+
+    parent::__construct($attributes);
+  }
+
   /**
    * The primary key is the same id than the related EntityBase
    */
   protected $primaryKey = 'id';
   public $incrementing = false;
-
-  protected $table = 'nodata';
 
 
   /**
@@ -23,9 +36,9 @@ class KusikusiModel extends Model
    */
   public function instanceModelId()
   {
-    return self::classModelId();
+    return self::modelId();
   }
-  public static function classModelId()
+  public static function modelId()
   {
     return $model['model'] = kebab_case(class_basename(get_called_class()));
   }
@@ -39,12 +52,31 @@ class KusikusiModel extends Model
 
 
   /**
-   * Get the contents of the EntityBase.
+   * Set the contents relation of the EntityBase.
    */
-  public function contents()
+  public function relatedContents()
   {
     return $this->hasMany('Cuatromedios\Kusikusi\Models\EntityContent', 'entity_id');
   }
+  /**
+   * Mutator to create or update the entity alongside the related model
+   * @param $value
+   */
+  public function setContentsAttribute(array $value)
+  {
+
+  }
+
+  /**
+   * Mutator to create or update the entity alongside the related model
+   * @return Returns the original relation
+   */
+  public function getContentsAttribute()
+  {
+    return $this->relatedContents;
+  }
+
+
 
   /**
    * Get the activity related to the EntityBase.
@@ -73,20 +105,12 @@ class KusikusiModel extends Model
    */
   protected $hidden = [];
 
-  /**
-   * Actions to be done on boot
-   */
-  public static function boot()
-  {
+  public static function boot() {
+
     parent::boot();
 
-    self::creating(function ($model)
-    {
-      // Auto populate the id field
-      if (!isset($model['id'])) {
-        $model['id'] = Uuid::uuid4()->toString();
-      }
+    self::retrieved(function ($model) {
+      $model->_id = $model->id;
     });
   }
-
 }

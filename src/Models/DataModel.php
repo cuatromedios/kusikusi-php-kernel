@@ -9,34 +9,50 @@ class DataModel extends KusikusiModel
 {
 
   public $modelId = 'no-model';
-
-  public function __construct(array $attributes = [])
-  {
-    parent::__construct($attributes);
-  }
+  protected $table = 'nodata';
+  private $_entity;
 
   /**
    * Get the Entity that is related to this instance.
    */
-  public function entity()
-  {
+  public function relatedEntity() {
     return $this->belongsTo('App\Models\Entity', 'id');
   }
 
-  public static function boot()
-  {
-    parent::boot();
-
-    self::creating(function ($model)
-    {
-      $entity = new Entity([
-          "id" => $model->id,
-          "model" => self::classModelId(),
-          "name" => ucfirst($model->id) //TODO: Get the title if it is comming in the model
-      ]);
-      $entity->save();
-    });
+  /**
+   * Mutator to create or update the entity alongside the related model
+   * @param $value
+   */
+  public function setEntityAttribute($values) {
+    $merged_values = array_merge(["id" => $this->_id], ["model" => self::modelId()], $values);
+    $this->_entity = Entity::firstOrNew(["id" => $this->_id], $merged_values);
+    $this->_entity->attributes = array_merge($this->_entity->attributes, $values);
   }
 
+  /**
+   * Mutator to create or update the entity alongside the related model
+   * @return Returns the original relation
+   */
+  public function getEntityAttribute() {
+    return $this->_entity;
+  }
+
+  public static function boot() {
+
+    parent::boot();
+
+    self::saving(function ($model) {
+      $model->model = self::modelId();
+    });
+    self::saved(function ($model) {
+      $model->_entity->save();
+    });
+    self::retrieved(function ($model) {
+      $model->_entity = $model->relatedEntity;
+    });
+    static::addGlobalScope('model', function ($builder) {
+      $builder->where('model', self::modelId());
+    });
+  }
 
 }
