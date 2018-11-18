@@ -11,6 +11,8 @@ class DataModel extends KusikusiModel
   public $modelId = 'nomodel';
   protected $table = 'nodata';
   protected $_entity;
+  protected $appends = array('entity');
+  protected $hidden = array('relatedEntity');
 
   /**
    * Set the relation to an Entity.
