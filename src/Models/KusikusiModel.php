@@ -8,19 +8,16 @@ use Illuminate\Database\Eloquent\Model;
 class KusikusiModel extends Model
 {
 
-  protected $_id;
-
-  public function __construct(array $attributes = array())
+  public function __construct(array $newAttributes = array())
   {
-    if (!isset($attributes['id'])) {
+    if (!isset($newAttributes['id'])) {
       $generatedId =  Uuid::uuid4()->toString();
-      $attributes['id'] = $generatedId;
-      $this->_id = $generatedId;
+      $this->attributes['id'] = $generatedId;
     } else {
-      $this->_id = $attributes['id'];
+      $this->attributes['id'] = $newAttributes['id'];
     }
 
-    parent::__construct($attributes);
+    parent::__construct($newAttributes);
   }
 
   /**
@@ -110,7 +107,7 @@ class KusikusiModel extends Model
     parent::boot();
 
     self::retrieved(function ($model) {
-      $model->_id = $model->id;
+
     });
   }
 }
