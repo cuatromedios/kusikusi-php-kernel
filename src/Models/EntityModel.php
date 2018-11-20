@@ -51,6 +51,9 @@ class EntityModel extends KusikusiModel
       'active' => 'boolean'
   ];
 
+  protected $appends = ['contents'];
+  protected $hidden = ['relatedContents'];
+
   /**
    * The model should use soft deletes.
    *
@@ -801,7 +804,7 @@ class EntityModel extends KusikusiModel
     });
 
     self::saving(function ($model) {
-      $model = EntityModel::replaceContent($model);
+      // $model = EntityModel::replaceContent($model);
     });
 
     self::created(function ($model) {

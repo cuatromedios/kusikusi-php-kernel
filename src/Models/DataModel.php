@@ -11,8 +11,8 @@ class DataModel extends KusikusiModel
   public $modelId = 'nomodel';
   protected $table = 'nodata';
   protected $_entity;
-  protected $appends = array('entity');
-  protected $hidden = array('relatedEntity');
+  protected $appends = ['entity', 'contents'];
+  protected $hidden = ['relatedEntity', 'relatedContents'];
 
   /**
    * Set the relation to an Entity.
@@ -47,6 +47,7 @@ class DataModel extends KusikusiModel
       $model->model = self::modelId();
     });
     self::saved(function ($model) {
+      $model->_entity->clearContents();
       $model->_entity->save();
     });
     self::retrieved(function ($model) {

@@ -2,19 +2,29 @@
 
 namespace Cuatromedios\Kusikusi\Models;
 
-use Ramsey\Uuid\Uuid;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\DB;
+use Ramsey\Uuid\Uuid;
 
 class KusikusiModel extends Model
 {
 
-  public function __construct(array $newAttributes = array())
+  protected $_contents = [];
+  protected $_lang;
+  protected $hidden = ['relatedContents'];
+
+  public function __construct(array $newAttributes = array(), $lang = NULL)
   {
     if (!isset($newAttributes['id'])) {
       $generatedId =  Uuid::uuid4()->toString();
       $this->attributes['id'] = $generatedId;
     } else {
       $this->attributes['id'] = $newAttributes['id'];
+    }
+    if ($lang == NULL) {
+      $this->_lang = Config::get('cms.langs')[0];
     }
 
     parent::__construct($newAttributes);
@@ -55,25 +65,69 @@ class KusikusiModel extends Model
   {
     return $this->hasMany('Cuatromedios\Kusikusi\Models\EntityContent', 'entity_id');
   }
-  /**
-   * Mutator to create or update the entity alongside the related model
-   * @param $value
-   */
-  public function setContentsAttribute(array $value)
-  {
 
+  /**
+   * Mutator to create or update the contents alongside the related model
+   * @param array $value
+   */
+  public function setContentsAttribute($contents) {
+    //TODO: Is there a faster way to do it?
+    foreach ($contents as $key => $value) {
+      $keyType = gettype($key);
+      $valueType = gettype($value);
+      if ($keyType == "string" && $valueType == "string") {
+        $this->_contents[$this->attributes['id']."_".$this->_lang."_".$key] = $value;
+        //print("\n".$this->attributes['id']."_".$this->_lang."_".$key." = ".$value);
+      } else if ($keyType == "string" && $valueType == "array") {
+        $this->_contents[$this->attributes['id']."_".$key."_".key($value)] = $value[key($value)];
+        //print("\n".$this->attributes['id']."_".$key."_".key($value)." = ".$value[key($value)]);
+      }
+    }
   }
 
   /**
-   * Mutator to create or update the entity alongside the related model
-   * @return Returns the original relation
+   * Mutator to retrieve the contents alongside the related model
+   * @return array Returns the related entity
    */
-  public function getContentsAttribute()
-  {
-    return $this->relatedContents;
+  public function getContentsAttribute() {
+    $result = [];
+    //TODO: Is there a faster way to do it?
+    foreach ($this->_contents as $key => $value) {
+      $keys = explode("_", $key);
+      if ($keys[1] == $this->_lang) {
+        $result[$keys[2]] = $value;
+      }
+    }
+    return $result;
   }
 
+  public function getRawContents() {
+    $result = [];
+    //TODO: Is there a faster way to do it?
+    foreach ($this->_contents as $key => $value) {
+      $keys = explode("_", $key);
+      $result[] = [
+          "id" => $key,
+          "entity_id" => $keys[0],
+          "lang" => $keys[1],
+          "field" => $keys[2],
+          "value" => $value,
+      ];
+    }
+    return $result;
+  }
 
+  public function  clearContents() {
+    $this->_contents = [];
+  }
+
+  public function getLang() {
+    return $this->_lang;
+  }
+
+  public function setLang($lang) {
+    $this->_lang = $lang;
+  }
 
   /**
    * Get the activity related to the EntityBase.
@@ -100,14 +154,23 @@ class KusikusiModel extends Model
    * The attributes excluded from the model's JSON form.
    * @var array
    */
-  protected $hidden = [];
 
   public static function boot() {
 
     parent::boot();
 
-    self::retrieved(function ($model) {
+    self::saved(function (KusikusiModel $model) {
+      foreach ($model->getRawContents() as $contentRow) {
+        $where = ['id' => $contentRow['id']];
+        $set = ['id' => $contentRow['id'], 'entity_id' => $contentRow['entity_id'], 'lang' => $contentRow['lang'], 'field' => $contentRow['field'], 'value' => $contentRow['value']];
+        EntityContent::updateOrCreate($where, $set);
+      }
+    });
 
+    self::retrieved(function (KusikusiModel $model) {
+      foreach ($model->relatedContents as $contentRow) {
+        $model->_contents[$contentRow->entity_id."_".$contentRow->lang."_".$contentRow->field] = $contentRow->value;
+      }
     });
   }
 }

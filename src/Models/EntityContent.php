@@ -16,7 +16,7 @@ class EntityContent extends Model
     /**
      * The primary key
      */
-    protected $primaryKey = 'entity_id';
+    protected $primaryKey = 'id';
 
     /**
      * Indicates if the IDs are auto-incrementing.
@@ -24,6 +24,7 @@ class EntityContent extends Model
      * @var bool
      */
     public $incrementing = false;
+    protected $keyType = 'string';
 
     /**
      * Indicates  the model should be timestamped.
@@ -37,8 +38,10 @@ class EntityContent extends Model
      */
     public function entity()
     {
-        return $this->belongsTo('Cuatromedios\Kusikusi\Models\EntityBase');
+        return $this->belongsTo('App\Models\Entity');
     }
+
+
 
     /**
      * The attributes that are mass assignable.
@@ -56,7 +59,6 @@ class EntityContent extends Model
      * @var array
      */
     protected $hidden = [
-        'entity_id',
     ];
 
 }
