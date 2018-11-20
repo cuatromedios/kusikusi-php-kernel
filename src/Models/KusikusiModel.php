@@ -24,7 +24,9 @@ class KusikusiModel extends Model
       $this->attributes['id'] = $newAttributes['id'];
     }
     if ($lang == NULL) {
-      $this->_lang = Config::get('cms.langs')[0];
+      $this->setLang(Config::get('cms.langs')[0]);
+    } else {
+      $this->setLang($lang);
     }
 
     parent::__construct($newAttributes);
