@@ -15,7 +15,8 @@ class DataModel extends KusikusiModel
   public $modelId = 'nomodel';
   protected $table = DataModel::NO_DATA_TABLE;
   protected $_entity;
-  protected $appends = ['entity', 'contents'];
+  // protected $appends = ['entity', 'contents'];
+  // protected $with = ['relatedContents', 'relatedEntity'];
   protected $hidden = ['relatedEntity', 'relatedContents'];
 
   public function __construct(array $newAttributes = array(), $lang = NULL)

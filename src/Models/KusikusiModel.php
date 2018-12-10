@@ -14,6 +14,7 @@ class KusikusiModel extends Model
   protected $_contents = [];
   protected $_lang;
   protected $hidden = ['relatedContents'];
+  // protected $appends = ['contents'];
 
   public function __construct(array $newAttributes = array(), $lang = NULL)
   {
@@ -139,18 +140,6 @@ class KusikusiModel extends Model
     return $this->hasMany('Cuatromedios\Kusikusi\Models\Activity', 'entity_id');
   }
 
-  /**
-   * Get the related entities
-   */
-
-  public function relations()
-  {
-    return $this->belongsToMany('App\Models\Entity', 'relations', 'caller_entity_id', 'called_entity_id')
-        ->using('Cuatromedios\Kusikusi\Models\Relation')
-        ->as('relations')
-        ->withPivot('kind', 'position', 'depth', 'tags')
-        ->withTimestamps();
-  }
 
   /**
    * The attributes excluded from the model's JSON form.

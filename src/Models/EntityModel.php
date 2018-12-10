@@ -51,7 +51,7 @@ class EntityModel extends KusikusiModel
       'active' => 'boolean'
   ];
 
-  protected $appends = ['contents'];
+  // protected $appends = ['contents'];
   protected $hidden = ['relatedContents'];
 
   /**
@@ -919,7 +919,7 @@ class EntityModel extends KusikusiModel
       EntityBase::updateEntityVersion($entity['id']);
     });*/
   }
-
+ /*
   private static function replaceContent($model)
   {
     if (isset($model['contents'])) {
@@ -959,7 +959,8 @@ class EntityModel extends KusikusiModel
     unset($model['contents']);
     return $model;
   }
-
+  */
+  /*
   private static function replaceData($model)
   {
     $modelClass = EntityBase::getDataClass($model['model']);
@@ -975,6 +976,7 @@ class EntityModel extends KusikusiModel
     unset($model['data']);
     return $model;
   }
+  */
 
   /**
    * Updates the entity version, tree version and full version of the given entity
