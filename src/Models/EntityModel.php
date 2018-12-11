@@ -14,6 +14,20 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 class EntityModel extends KusikusiModel
 {
 
+  protected $_contents = [];
+  protected $_lang;
+
+  public function __construct(array $newAttributes = array(), $lang = NULL)
+  {
+    if ($lang == NULL) {
+      $this->setLang(Config::get('cms.langs')[0]);
+    } else {
+      $this->setLang($lang);
+    }
+    parent::__construct($newAttributes);
+  }
+
+
   /**
    * The table associated with the model.
    *
@@ -51,9 +65,6 @@ class EntityModel extends KusikusiModel
       'active' => 'boolean'
   ];
 
-  protected $appends = ['contents'];
-  protected $hidden = ['relatedContents'];
-
   /**
    * The model should use soft deletes.
    *
@@ -67,6 +78,37 @@ class EntityModel extends KusikusiModel
    * @var bool
    */
   public $timestamps = true;
+
+
+
+  /**
+   * Set the contents relation of the EntityBase.
+   */
+  public function contents()
+  {
+    return $this->hasMany('Cuatromedios\Kusikusi\Models\EntityContent', 'entity_id');
+  }
+
+  public function addContents($contents)
+  {
+    foreach ($contents as $key=>$value) {
+      $this->contents()->save(new EntityContent([$key => $value]));
+    }
+  }
+
+  public function getContentsAttribute($contents) {
+    return ("Naaa");
+  }
+
+  public function getLang() {
+    return $this->_lang;
+  }
+
+  public function setLang($lang) {
+    $this->_lang = $lang;
+  }
+
+
 
   /**
    * Scope a query to only include entities of a given modelId.
@@ -98,10 +140,12 @@ class EntityModel extends KusikusiModel
    */
   public function relations()
   {
-    return $this->belongsToMany('App\Models\Entity', 'relations', 'caller_id', 'called_id')
+    return $this
+        ->belongsToMany('App\Models\Entity', 'relations', 'caller_id', 'called_id')
+        ->without('relations')
         ->using('Cuatromedios\Kusikusi\Models\Relation')
         ->as('relations')
-        ->withPivot('kind', 'position', 'tags')
+        ->withPivot('kind', 'position', 'depth', 'tags')
         ->withTimestamps();
   }
 
@@ -111,720 +155,31 @@ class EntityModel extends KusikusiModel
   public function addRelation($data)
   {
     if (isset($data['id'])) {
-      if (!isset($data['relation']['kind'])) {
-        $data['relation']['kind'] = 'relation';
+      $id = $data['id'];
+      unset($data['id']);
+      if (!isset($data['kind'])) {
+        $data['kind'] = 'relation';
       }
-      if (!isset($data['relation']['position'])) {
-        $data['relation']['position'] = 0;
+      if (!isset($data['position'])) {
+        $data['position'] = 0;
       }
-      if (!isset($data['relation']['tags'])) {
-        $data['relation']['tags'] = '';
+      if (!isset($data['tags'])) {
+        $data['tags'] = '';
       }
-      if (is_array($data['relation']['tags'])) {
-        $data['relation']['tags'] = implode(',', $data['tags']);
+      if (is_array($data['tags'])) {
+        $data['tags'] = implode(',', $data['tags']);
       }
-      if (!isset($data['relation']['depth'])) {
-        $data['relation']['depth'] = 0;
+      if (!isset($data['depth'])) {
+        $data['depth'] = 0;
       }
-      if (count($this->relations()->where(['called_id' => $data['id'], 'kind' => $data['relation']['kind']])->get()) > 0) {
-        $this->relations()->updateExistingPivot($data['id'], $data['relation']);
+      if (count($this->relations()->where(['called_id' => $id, 'kind' => $data['kind']])->get()) > 0) {
+        $this->relations()->updateExistingPivot($id, $data);
       } else {
-        $this->relations()->attach($data['id'], $data['relation']);
+        $this->relations()->attach($id, $data);
       }
-      return ['id' => $this->id];
+      return ['id' => $id];
     }
   }
-
-  /**
-   * Returns an entity.
-   *
-   * @param $id
-   * @return \Illuminate\Http\JsonResponse|string
-   */
-  /*
-  public static function getOne($id, $fields = [], $lang = NULL)
-  {
-    $lang = isset($lang) ? $lang : Config::get('general.langs')[0];
-    $fieldsArray = is_array($fields) ? $fields : explode(',', $fields);
-    if (count($fieldsArray) === 0) {
-      $fieldsArray = ['entities.*', 'data.*', 'contents.*'];
-    }
-    $groupedFields = ['entities' => [], 'contents' => [], 'data' => []];
-    foreach ($fieldsArray as $field) {
-      $fieldParts = explode('.', $field);
-      $groupName = trim($fieldParts[0]);
-      $groupField = trim($fieldParts[1]);
-      switch ($groupName) {
-        case 'entity':
-        case 'entities':
-        case 'e':
-          $groupedFields['entities'][] = $groupField;
-          break;
-        case 'contents':
-        case 'content':
-        case 'c':
-          $groupedFields['contents'][] = $groupField;
-          break;
-        default:
-          $groupedFields['data'][] = $groupField;
-          break;
-      }
-    }
-
-    // Temporary add model and id field if not requested because they are needed, but removed at the final of the function
-    if (array_search('model', $groupedFields['entities']) === FALSE && array_search('*', $groupedFields['entities']) === FALSE) {
-      $removeModelField = TRUE;
-      $groupedFields['entities'][] = 'model';
-    } else {
-      $removeModelField = FALSE;
-    }
-    if (array_search('id', $groupedFields['entities']) === FALSE && array_search('*', $groupedFields['entities']) === FALSE) {
-      $removeIdField = TRUE;
-      $groupedFields['entities'][] = 'id';
-    } else {
-      $removeIdField = FALSE;
-    }
-
-    // ENTITY Fields
-
-    $entity = EntityBase::where('id', $id)->select($groupedFields['entities'])->firstOrFail();
-    $modelClass = EntityBase::getDataClass($entity['model']);
-
-    // DATA Fields
-    if (count($groupedFields['data']) > 0 && count($modelClass::$dataFields) > 0) {
-      $entity->data;
-      // TODO: This is not the correct way to restrict the fields on the Data model, we are removing them if not needed, but should be better to never call them
-      if (array_search('*', $groupedFields['data']) === FALSE) {
-        foreach ($entity->data->attributes as $dataFieldName => $dataFieldValue) {
-          if (array_search($dataFieldName, $groupedFields['data']) === FALSE) {
-            unset($entity->data[$dataFieldName]);
-          }
-        }
-      }
-    }
-
-    // CONTENT Fields
-    if (count($groupedFields['contents']) > 0) {
-      $contentsQuery = $entity->contents();
-      if (array_search('*', $groupedFields['contents']) === FALSE) {
-        $contentsQuery->whereIn('field', $groupedFields['contents']);
-      }
-      if ($lang !== 'raw' && $lang !== 'grouped') {
-        $contentsQuery->where('lang', $lang);
-      }
-      $contentsList = $contentsQuery->get();
-      $contents = [];
-      if ($lang === 'raw') {
-        $contents = $contentsList;
-      } else if ($lang === 'grouped') {
-        foreach ($contentsList as $content) {
-          $contents[$content['lang']][$content['field']] = $content['value'];
-        }
-        $entity['contents'] = $contentsList;
-      } else {
-        foreach ($contentsList as $content) {
-          $contents[$content['field']] = $content['value'];
-        }
-        foreach($modelClass::$contentFields as $field) {
-          data_fill($contents, $field, '');
-        }
-      }
-      $entity['contents'] = $contents;
-    }
-
-
-    if ($removeModelField) {
-      array_forget($entity, 'model');
-    }
-    if ($removeIdField) {
-      array_forget($entity, 'id');
-    }
-
-
-    return $entity;
-  }
-*/
-
-  /**
-   * Creates an entity.
-   *
-   * @param $information
-   * @return \Illuminate\Http\JsonResponse|array
-   */
-  /*
-  public static function post($information)
-  {
-    //TODO: Sanitize the $information
-    $entity = EntityBase::create($information);
-    return ['id' => $entity['id']];
-  }
-*/
-
-  /**
-   * Creates a relation.
-   *
-   * @param $id
-   * @param $information
-   * @return \Illuminate\Http\JsonResponse|array
-   */
-  /*
-  public static function postRelation($id, $information)
-  {
-    //TODO: Sanitize the $information
-    //TODO: Do not allow blank kind field
-    $entity = EntityBase::where("id", $id)->firstOrFail();
-    if (!isset($information['kind'])) {
-      $information['kind'] = 'relation';
-    }
-    if (!isset($information['position'])) {
-      $information['position'] = 0;
-    }
-    if (!isset($information['tags'])) {
-      $information['tags'] = '';
-    }
-    if (is_array($information['tags'])) {
-      $information['tags'] = implode(',', $information['tags']);
-    }
-    if (!isset($information['depth'])) {
-      $information['depth'] = 0;
-    }
-    $relation = DB::table('relations')->where(['entity_caller_id' => $id, 'entity_called_id' => $information['id'], 'kind' => $information['kind']])->delete();
-    $entity->relations()->attach($information['id'], ['kind' => $information['kind'], 'position' => $information['position'], 'tags' => $information['tags'], 'depth' => $information['depth']]);
-    EntityBase::updateRelationVersion($id, $information['id']);
-    return ['id' => $entity['id']];
-  }
-*/
-  /**
-   * Deletes a relation.
-   *
-   * @param $id
-   * @param $information
-   * @return \Illuminate\Http\JsonResponse|array
-   */
-  /*
-  public static function deleteRelation($id, $called, $kind)
-  {
-    //TODO: Sanitize the $information
-    $entity = EntityBase::where("id", $id)->firstOrFail();
-    $where = ['entity_caller_id' => $id, 'entity_called_id' => $called, 'kind' => $kind];
-    EntityBase::updateRelationVersion($id, $called);
-    $relation = DB::table('relations')->where($where)->delete();
-    return ['id' => $entity['id']];
-  }
-*/
-
-  /**
-   * Updates an entity.
-   *
-   * @param $information
-   * @return \Illuminate\Http\JsonResponse|array
-   */
-  /*
-  public static function patch($id, $information)
-  {
-    //TODO: Sanitize the $information
-    $entity = EntityBase::where("id", $id)->firstOrFail();
-    $entity->update($information);
-    return ['id' => $entity['id']];
-  }
-*/
-
-  /**
-   * Soft deletes an entity.
-   *
-   * @param $id
-   * @return \Illuminate\Http\JsonResponse|array
-   */
-/*
-  public static function softDelete($id)
-  {
-    $entity = EntityBase::destroy($id);
-    EntityBase::updateEntityVersion($id);
-    return ['id' => $entity['id']];
-  }
-*/
-
-  /**
-   * Hard deletes an entity.
-   *
-   * @param $id
-   * @return \Illuminate\Http\JsonResponse|array
-   */
-/*
-  public static function hardDelete($id)
-  {
-    $entity = EntityBase::where("id", $id)->withTrashed()->firstOrFail();
-    $modelClass = EntityBase::getDataClass($entity['model']);
-    if (count($modelClass::$dataFields) > 0 && isset($entity['data'])) {
-      $modelClass::destroy($id);
-      $entity->forceDelete();
-      EntityBase::updateEntityVersion($id);
-    } else {
-      $entity->forceDelete();
-      EntityBase::updateEntityVersion($id);
-    }
-    DB::table('relations')->where('entity_caller_id', $id)->delete();
-    DB::table('relations')->where('entity_called_id', $id)->delete();
-    return ['id' => $entity['id']];
-  }
-*/
-
-  /**
-   * Returns an entity's parent.
-   *
-   * @param $id
-   * @return \Illuminate\Http\JsonResponse|string
-   */
-  /*
-  public static function getParent($id, $fields = [], $lang = NULL)
-  {
-    $entity = EntityBase::getOne($id);
-    $parent = EntityBase::getOne($entity->parent, $fields, $lang);
-
-    return $parent;
-  }
-*/
-
-  /**
-   * Get a list of entities.
-   *
-   * @param \Illuminate\Database\Query\Builder $query A DB query builder instance or null
-   * @param array $query A DB query builder instance or null
-   * @param array $fields An array of strings representing a field like entities.model, contents.title or media.format
-   * @param string $lang The name of the language for content fields or null. If null, default language will be taken.
-   * @return Collection
-   */
-  /*
-  public static function get($query = NULL, $fields = [], $lang = NULL, $order = NULL, $filter = NULL)
-  {
-    if (!isset($query)) {
-      $query = DB::table('entities');
-    }
-    $lang = isset($lang) ? $lang : Config::get('general.langs')[0];
-    $query->where('deleted_at', NULL);
-    if (isset($filter)) {
-      if (!is_array($filter)) {
-        $filter = explode(",", $filter);
-      }
-      for ($f = 0; $f < count($filter); $f++) {
-        // TODO: Allow more operators like < > <>
-        if (!is_array($filter[$f])) {
-          $filter[$f] = explode(":", $filter[$f]);
-        }
-        $query->where(...$filter[$f]);
-      }
-    }
-
-    // Preprocess the order fields
-    // TODO: This may be more efficient using REGEX
-    // TODO: If the order has more than two sentences, SHOULD respect the order, currentlly this doesn't happens, they are added in the orderd the fields are processed. This is because we need the table name alias.
-    $order = isset($order) ? is_array($order) ? $order : explode(',', $order) : [];
-    $collapsedOrders = [];
-    foreach ($order as $orderItem) {
-      $orderItem = str_replace(['.', ':'], '.', $orderItem);
-      $orderItemParts = explode('.', $orderItem);
-      if (count($orderItemParts) > 1) {
-        if (count($orderItemParts) < 3 || (isset($orderItemParts[2]) && $orderItemParts[2] !== 'desc')) {
-          $orderItemParts[2] = 'asc';
-        }
-        if ($orderItemParts[0] === 'e' || $orderItemParts[0] === 'entity' || $orderItemParts[0] === 'entities') {
-          $orderItemParts[0] = 'entities';
-        } else if ($orderItemParts[0] === 'c' || $orderItemParts[0] === 'content' || $orderItemParts[0] === 'contents') {
-          $orderItemParts[0] = 'contents';
-        } else if ($orderItemParts[0] === 'r' || $orderItemParts[0] === 'relation' || $orderItemParts[0] === 'relations') {
-          $orderItemParts[0] = 'relations';
-        } else {
-          $orderItemParts[0] = 'data';
-        }
-        $collapsedOrders[$orderItemParts[0] . '.' . $orderItemParts[1]] = $orderItemParts[2];
-      }
-    }
-
-    // TODO: look for a more efficient way to make this, We cannot make a 'with' to get the related data because every row may be a different model. Is there a way to make this Eloquent way?
-    // Join tables based on requested fields, both for contents and data models.
-
-    if (is_array($fields) && count($fields) === 0) {
-      $fields = ['entities.*', 'data.*', 'contents.*'];
-    }
-    if (!is_array($fields)) {
-      $fields = explode(',', $fields);
-    }
-    if (is_array($fields) && count($fields) > 0) {
-      // TODO: Check if the requested fields are valid for the model
-      // TODO: Orders are not taken in account if fields does not exist, is that ok?
-      $fieldsForSelect = [];
-      $fieldsArray = is_array($fields) ? $fields : explode(',', $fields);
-      $contentIndex = 0;
-      $alreadyJoinedDataTables = [];
-      $selectContents = false;
-      $selectData = false;
-      $selectRelations = false;
-      foreach ($fieldsArray as $field) {
-        $fieldParts = explode('.', $field);
-        $groupName = trim($fieldParts[0]);
-        $groupField = trim($fieldParts[1]);
-        switch (count($fieldParts)) {
-          case 1:
-            $fieldsForSelect[] = $field;
-            break;
-          case 2:
-            switch ($groupName) {
-              case 'entity':
-              case 'entities':
-              case 'e':
-                // EntityBase fields doesn't need to be joined, just the fields to be selected
-                $fieldsForSelect[] = 'entities.' . $groupField;
-                if (isset($collapsedOrders['entities.' . $groupField])) {
-                  $query->orderBy('entities.' . $groupField, $collapsedOrders['entities.' . $groupField]);
-                }
-                break;
-              case 'relations':
-              case 'relation':
-              case 'r':
-                $selectRelations = true;
-                if ($groupField === '*') {
-                  $relationFields = ['kind', 'position', 'tags', 'depth'];
-                  foreach ($relationFields as $relationField) {
-                    $fieldsForSelect[] = 'ar.' . $relationField . ' as relation.' . $relationField;
-                    if (isset($collapsedOrders['relations.' . $relationField])) {
-                      $query->orderBy('ar.' . $relationField, $collapsedOrders['relations.' . $relationField]);
-                    }
-                  }
-                } else {
-                  $fieldsForSelect[] = 'ar.' . $groupField . ' as relation.' . $groupField;
-                  if (isset($collapsedOrders['relations.' . $groupField])) {
-                    $query->orderBy('ar.' . $groupField, $collapsedOrders['relations.' . $groupField]);
-                  }
-                }
-                break;
-              case 'content':
-              case 'contents':
-              case 'c':
-                $selectContents = true;
-                // Join contents table for every content field requested
-                if ($groupField === '*') {
-                  $allContentFields = DB::table('contents')->select('field')->groupBy('field')->get();
-                  foreach (array_pluck($allContentFields, 'field') as $contentField) {
-                    $tableAlias = 'c' . $contentIndex;
-                    $fieldsForSelect[] = $tableAlias . '.value as contents.' . $contentField;
-                    $query->leftJoin('contents as c' . $contentIndex, function ($join) use ($contentIndex, $contentField, $lang, $tableAlias) {
-                      $join->on($tableAlias . '.entity_id', '=', 'entities.id')->where($tableAlias . '.lang', '=', $lang)->where($tableAlias . '.field', '=', $contentField);
-                    });
-                    if (isset($collapsedOrders['contents.' . $contentField])) {
-                      // print($tableAlias.'.value'." : ".$collapsedOrders['entities.'.$contentField]);
-                      $query->orderBy($tableAlias . '.value', $collapsedOrders['contents.' . $contentField]);
-                    }
-                    $contentIndex++;
-                  }
-                } else {
-                  $tableAlias = 'c' . $contentIndex;
-                  $fieldsForSelect[] = $tableAlias . '.value as contents.' . $groupField;
-                  $query->leftJoin('contents as c' . $contentIndex, function ($join) use ($contentIndex, $groupField, $lang, $tableAlias) {
-                    $join->on($tableAlias . '.entity_id', '=', 'entities.id')->where($tableAlias . '.lang', '=', $lang)->where($tableAlias . '.field', '=', $groupField);
-                  });
-                  if (isset($collapsedOrders['contents.' . $groupField])) {
-                    $query->orderBy($tableAlias . '.value', $collapsedOrders['contents.' . $groupField]);
-                  }
-                  $contentIndex++;
-                }
-                $contentIndex++;
-                break;
-              default:
-                // Join a data model
-                // TODO: Do not try to join a data model that doesn't exist
-                // TODO: It seems there is a bug where data fields get duplicated in the SQL sentence
-                $selectData = true;
-                if ($groupName === 'd') {
-                  $groupName = 'data';
-                }
-                $modelClass = EntityBase::getDataClass(str_singular($groupName));
-                if ($groupName === 'data') {
-                  $allDataModels = DB::table('entities')->select('model')->groupBy('model')->get();
-                  if ($groupField === '*') {
-                    foreach (array_pluck($allDataModels, 'model') as $modelName) {
-                      $modelClass = EntityBase::getDataClass(str_singular($modelName));
-                      $modelInstance = new $modelClass;
-                      if (count($modelClass::$dataFields) > 0) {
-                        $pluralModelName = $modelInstance->table ? $modelInstance->table : str_plural($modelName);
-                        foreach ($modelClass::$dataFields as $dataField) {
-                          $fieldsForSelect[] = $pluralModelName . '.' . $dataField . ' as data.' . $dataField;
-                          if (isset($collapsedOrders['data.' . $dataField])) {
-                            $query->orderBy($pluralModelName . '.' . $dataField, $collapsedOrders['data.' . $dataField]);
-                          }
-                        }
-                        if (!isset($alreadyJoinedDataTables[$pluralModelName])) {
-                          $query->leftJoin($pluralModelName, $pluralModelName . '.id', '=', 'entities.id');
-                          $alreadyJoinedDataTables[$pluralModelName] = TRUE;
-                        }
-                      }
-                    }
-                  } else {
-                    foreach (array_pluck($allDataModels, 'model') as $modelName) {
-                      $modelClass = EntityBase::getDataClass(str_singular($modelName));
-                      $modelInstance = new $modelClass;
-                      if (count($modelClass::$dataFields) > 0) {
-                        $pluralModelName = $modelInstance->table ? $modelInstance->table : str_plural($modelName);
-                        foreach ($modelClass::$dataFields as $dataField) {
-                          if ($dataField === $groupField) {
-                            $fieldsForSelect[] = $pluralModelName . '.' . $dataField . ' as data.' . $dataField;
-                            if (isset($collapsedOrders['data.' . $dataField])) {
-                              $query->orderBy($pluralModelName . '.' . $dataField, $collapsedOrders['data.' . $dataField]);
-                            }
-                          }
-                        }
-                        if (!isset($alreadyJoinedDataTables[$pluralModelName])) {
-                          $query->leftJoin($pluralModelName, $pluralModelName . '.id', '=', 'entities.id');
-                          $alreadyJoinedDataTables[$pluralModelName] = TRUE;
-                        }
-                      }
-                    }
-                  }
-                } else {
-                  if ($groupField === '*') {
-                    foreach ($modelClass::$dataFields as $dataField) {
-                      $fieldsForSelect[] = $groupName . '.' . $dataField . ' as data.' . $dataField;
-                      if (isset($collapsedOrders['data.' . $dataField])) {
-                        $query->orderBy($groupName . '.' . $dataField, $collapsedOrders['data.' . $dataField]);
-                      }
-                    }
-                  } else {
-                    if (array_search($groupField, $modelClass::$dataFields) !== FALSE) {
-                      $fieldsForSelect[] = $groupName . '.' . $groupField . ' as data.' . $groupField;
-                      if (isset($collapsedOrders['data.' . $groupField])) {
-                        $query->orderBy($groupName . '.' . $groupField, $collapsedOrders['data.' . $groupField]);
-                      }
-                    }
-                  }
-                  if (!isset($alreadyJoinedDataTables[$groupName])) {
-                    $query->leftJoin($groupName, $groupName . '.id', '=', 'entities.id');
-                    $alreadyJoinedDataTables[$groupName] = TRUE;
-                  }
-                }
-                break;
-            }
-            break;
-          default:
-            break;
-        }
-      }
-      if (count($fieldsForSelect) > 0) {
-        $query->select($fieldsForSelect);
-      }
-    } else {
-      $query->select('entities.*');
-    }
-    //var_dump($collapsedOrders);
-    //print ($query->toSql());
-    $collection = $query->get();
-    $exploded_collection = new Collection();
-    foreach ($collection as $entity) {
-      $exploded_entity = [];
-      foreach ($entity as $field => $value) {
-        if ($field === 'tags' || $field === 'relation.tags') {
-          $exploded_entity['relation']['tags'] = explode(',', $value);
-        } else if ($value !== null) {
-          array_set($exploded_entity, $field, $value);
-        }
-        if ($selectContents) { data_fill($exploded_entity, 'contents', []); }
-        if ($selectData) { data_fill($exploded_entity, 'data', []); }
-        if ($selectRelations) { data_fill($exploded_entity, 'relations', []); }
-      }
-      foreach($fieldsForSelect as $field) {
-        $fieldParts = explode(" as ", $field);
-        if (count($fieldParts) > 1) {
-          data_fill($exploded_entity, $fieldParts[1], '');
-        }
-      }
-      $exploded_collection[] = $exploded_entity;
-    }
-    return $exploded_collection;
-  }
-*/
-
-  /**
-   * Get a list of children.
-   *
-   * @param string $id The id of the entity whose parent need to be returned
-   * @param array $fields An array of strings representing a field like entities.model, contents.title or media.format
-   * @param string $lang The name of the language for content fields or null. If null, default language will be taken.
-   * @return Collection
-   */
-  /*
-  public static function getChildren($id, $fields = [], $lang = NULL, $order = 'entities.created_at.desc', $filter = NULL)
-  {
-    $query = DB::table('entities');
-    $query->join('relations as ar', function ($join) use ($id) {
-      $join->on('ar.entity_caller_id', '=', 'entities.id')
-          ->where('ar.entity_called_id', '=', $id)
-          ->where('ar.kind', '=', 'ancestor')
-          // ->whereRaw('FIND_IN_SET("a",ar.tags)')
-          ->where('ar.depth', '=', 1);
-    });
-    return EntityBase::get($query, $fields, $lang, $order, $filter);
-  }
-*/
-
-  /**
-   * Get a list of ancestors.
-   *
-   * @param string $id The id of the entity whose ancestors need to be returned
-   * @param array $fields An array of strings representing a field like entities.model, contents.title or media.format
-   * @param string $lang The name of the language for content fields or null. If null, default language will be taken.
-   * @return Collection
-   */
-  /*
-  public static function getAncestors($id, $fields = [], $lang = NULL, $order = NULL)
-  {
-    if (NULL === $order) {
-      $order = ['r.depth:desc'];
-    }
-    $query = DB::table('entities')
-        ->join('relations as ar', function ($join) use ($id) {
-          $join->on('ar.entity_called_id', '=', 'entities.id')
-              ->where('ar.entity_caller_id', '=', $id)
-              ->where('ar.kind', '=', 'ancestor');
-        });
-    return EntityBase::get($query, $fields, $lang, $order);
-  }
-*/
-
-  /**
-   * Returns an entity's ancestor of specific depth.
-   *
-   * @param $id
-   * @return \Illuminate\Http\JsonResponse|string
-   */
-  /*
-  public static function getAncestor($id, $depth = 0, $fields = [], $lang = NULL)
-  {
-    $ancestor = DB::table('relations')->where(["entity_caller_id" => $id])->where(["kind" => "ancestor"])->where(["depth" => $depth])->select(["entity_called_id"])->get();
-    return EntityBase::getOne($ancestor[0]->entity_called_id, $fields, $lang);
-  }
-*/
-
-
-  /**
-   * Get a list of descendants.
-   *
-   * @param string $id The id of the entity whose descendants need to be returned
-   * @param array $fields An array of strings representing a field like entities.model, contents.title or media.format
-   * @param string $lang The name of the language for content fields or null. If null, default language will be taken.
-   * @param array $order The list of order sentences like ['contents.title:asc'].
-   * @return Collection
-   */
-  /*
-  public static function getDescendants($id, $fields = [], $lang = NULL, $order = ['r.depth:asc'])
-  {
-    if (NULL === $order) {
-      $order = ['r.depth:asc'];
-    }
-    $query = DB::table('entities')
-        ->join('relations as ar', function ($join) use ($id) {
-          $join->on('ar.entity_caller_id', '=', 'entities.id')
-              ->where('ar.entity_called_id', '=', $id)
-              ->where('ar.kind', '=', 'ancestor');
-        });
-    return EntityBase::get($query, $fields, $lang, $order);
-  }
-*/
-
-  /**
-   * Get a list of relations the entity is calling (except ancestors).
-   *
-   * @param string $id The id of the entity whose descendants need to be returned
-   * @param array $fields An array of strings representing a field like entities.model, contents.title or media.format
-   * @param string $lang The name of the language for content fields or null. If null, default language will be taken.
-   * @param array $order The list of order sentences like ['contents.title:asc'].
-   * @return Collection
-   */
-  /*
-  public static function getEntityRelations($id, $kind = NULL, $fields = [], $lang = NULL, $order = NULL)
-  {
-    if (NULL === $order) {
-      $order = ['r.depth:asc'];
-    }
-    $query = DB::table('relations as ar')
-        ->where('ar.entity_caller_id', '=', $id);
-    if (NULL != $kind) {
-      $query->where('ar.kind', '=', $kind);
-    } else {
-      $query->where('ar.kind', '<>', 'ancestor');
-    }
-    $query->leftJoin('entities', function ($join) use ($id) {
-      $join->on('ar.entity_called_id', '=', 'entities.id');
-    });
-    return EntityBase::get($query, $fields, $lang, $order);
-  }
-*/
-
-  /**
-   * Get a list of relations the entity is called.
-   *
-   * @param string $id The id of the entity whose descendants need to be returned
-   * @param array $fields An array of strings representing a field like entities.model, contents.title or media.format
-   * @param string $lang The name of the language for content fields or null. If null, default language will be taken.
-   * @param array $order The list of order sentences like ['contents.title:asc'].
-   * @return Collection
-   */
-  /*
-  public static function getInverseEntityRelations($id, $kind = NULL, $fields = [], $lang = NULL, $order = NULL)
-  {
-    if (NULL === $order) {
-      $order = ['r.depth:asc'];
-    }
-    $query = DB::table('relations as ar')
-        ->where('ar.entity_called_id', '=', $id);
-    if (NULL != $kind) {
-      $query->where('ar.kind', '=', $kind);
-    } else {
-      $query->where('ar.kind', '<>', 'ancestor');
-    }
-    $query->leftJoin('entities', function ($join) use ($id) {
-      $join->on('ar.entity_caller_id', '=', 'entities.id');
-    });
-    return EntityBase::get($query, $fields, $lang, $order);
-  }
-*/
-
-  /**
-   * Get true if an entity is descendant of another.
-   *
-   * @param string $id1 The id of the reference entity
-   * @param string $id2 The id of the entity to know is an ancestor of
-   * @return Boolean
-   */
-  /*
-  public static function isDescendant($id1, $id2)
-  {
-    $ancestors = EntityBase::getAncestors($id1, ['e.id'], NULL, ['r.depth:asc']);
-    foreach ($ancestors as $ancestor) {
-      if ($ancestor['id'] === $id2) {
-        return true;
-      }
-    }
-    return false;
-  }
-*/
-
-  /**
-   * Get true if an entity is descendant of another or itself.
-   *
-   * @param string $id1 The id of the reference entity
-   * @param string $id2 The id of the entity to know is an ancestor of
-   * @return Boolean
-   */
-  /*
-  public static function isSelfOrDescendant($id1, $id2)
-  {
-    if ($id1 === $id2) {
-      return true;
-    } else {
-      return EntityBase::isDescendant($id1, $id2);
-    }
-  }
-*/
-
-
 
   /**
    * Events.
@@ -838,15 +193,11 @@ class EntityModel extends KusikusiModel
     parent::boot();
 
     self::creating(function ($model) {
-      // var_dump($model);
       if (!isset($model['model'])) {
         throw new \Exception('A model id is requiered to create a new entity', ApiResponse::STATUS_BADREQUEST);
       }
     });
 
-    self::saving(function ($model) {
-      // $model = EntityModel::replaceContent($model);
-    });
 
     self::created(function ($entity) {
       // Create the ancestors relations
@@ -858,163 +209,8 @@ class EntityModel extends KusikusiModel
           $entity->relations()->attach($ancestors[$a]['id'], ['kind' => 'ancestor', 'depth' => ($a + 2)]);
         }
       };
-      // Create the related model
-      /*$dataModelInfo = $model->toArray() ?? [];
-      unset($model['root']);
-      \App\Models\Root::firstOrCreate(
-          ["id" => $model['id']],
-          $dataModelInfo
-      );
-      */
     });
 
-    /*
-    self::updating(function ($model) {
-      // TODO: Dont allow to change the model?
-      // Preprocess the model data if the data class has a method defined for that. (Data models does not extend EntityBase)
-      $modelClass = EntityBase::getDataClass($model['model']);
-
-      // Use the user authenticated
-      if (isset($model['user_id'])) {
-        $model['updated_by'] = $model['user_id'];
-      }
-      unset($model['user_id']);
-      unset($model['user_profile']);
-
-      // Contents are sent to another table
-      $model = EntityBase::replaceContent($model);
-
-      // Data are sent to specific table
-      $model = EntityBase::replaceData($model);
-
-      if (method_exists($modelClass, 'beforeSave')) {
-        $model = $modelClass::beforeSave($model);
-      }
-
-      // TODO: Allow recreation of the tree when updating (now just disallow the change of the parent)
-      unset($model['parent']);
-      // For reference this is the code used in previous versions of kusikusi, please note we may not need
-      // to make a queue because we can now get the descendants ordered by depth:
-      $currentParent = $this->_properties['parent'];
-              $entityQueue = array();
-              array_push($entityQueue, $this);
-              $index = 0;
-              while (sizeof($entityQueue) > 0) {
-                  $currentEntity = $entityQueue[$index];
-                  //Solo al primer elemento se cambia su parent, para los demas solo se re-crea su arbol
-                  if ($index > 0) {
-                      $currentParent = $currentEntity->parent;
-                  }
-                  unset($entityQueue[$index]);
-                  $index++;
-                  //Se borran las antiguas relaciones con sus ancestros
-                  $ancestors = $currentEntity->getAncestors();
-                  foreach ($ancestors as $ancestor) {
-                      Relation::deleteRelation($currentEntity->id, $ancestor->id, 'ANCESTOR');
-                  }
-                  //Se agrega la relacion con su nuevo padre
-                  Relation::addRelation($currentEntity->id, $currentParent, 'ANCESTOR');
-
-                  //Se agregan los hijos al queue
-                  $children = $currentEntity->getChildren();
-                  foreach($children as $child) {
-                      array_push($entityQueue, $child);
-                  }
-              }
-    });
-    */
-
-    /*
-    self::creating(function (EntityBase $model) {
-
-      //TODO: Check if the parent allows this model as a children
-
-      // Preprocess the model data if the data class has a method defined for that. (Data models does not extend EntityBase)
-      $modelClass = EntityBase::getDataClass($model['model']);
-
-      // Use the user authenticated
-      if (isset($model['user_id'])) {
-        $model['created_by'] = $model['user_id'];
-        $model['updated_by'] = $model['user_id'];
-      }
-      unset($model['user_id']);
-      unset($model['user_profile']);
-
-      // Delete relations if they come
-      unset($model['relations']);
-
-      // Contents are sent to another table
-      $model = EntityBase::replaceContent($model);
-
-      // Data are sent to specific table
-      $model = EntityBase::replaceData($model);
-
-      if (method_exists($modelClass, 'beforeSave')) {
-        $model = $modelClass::beforeSave($model);
-      }
-
-    });
-
-    */
-    self::saved(function (Entity $entity) {
-      
-    });
-  }
-
-  private static function replaceContent($model)
-  {
-    if (isset($model['contents'])) {
-      $defaultLang = Config::get('general.langs')[0];
-      foreach ($model['contents'] as $rowOrFieldKey => $rowOrFieldValue) {
-        if (is_integer($rowOrFieldKey)) {
-          // If is an array, then we assume fields come as in the content table
-          $contentRowKeys = [
-              'entity_id' => $model['id'],
-              'field' => $rowOrFieldValue['field'],
-              'lang' => isset($rowOrFieldValue['lang']) ? $rowOrFieldValue['lang'] : $defaultLang
-          ];
-          $contentRowValue = ['value' => $rowOrFieldValue['value']];
-        } else {
-          // If not, we are going to use the default language and the keys as field names
-          $contentRowKeys = [
-              'entity_id' => $model['id'],
-              'field' => $rowOrFieldKey,
-              'lang' => $defaultLang,
-          ];
-          $contentRowValue = ['value' => $rowOrFieldValue];
-        }
-        // TODO: Is there a better way to do this? updateOrCreate doesn't suppor multiple keys
-        // TODO: Sanitize this but allow html content
-        $param_id = filter_var($contentRowKeys['entity_id'], FILTER_SANITIZE_STRING);
-        $param_field = filter_var($contentRowKeys['field'], FILTER_SANITIZE_STRING);
-        $param_lang = filter_var($contentRowKeys['lang'], FILTER_SANITIZE_STRING);
-        $param_value = ($contentRowValue['value']);
-        $query = sprintf('REPLACE INTO contents set value = "%s", entity_id="%s", field = "%s", lang = "%s"', $param_value, $param_id, $param_field, $param_lang);
-        DB::insert($query);
-
-        if ($contentRowKeys['field'] === 'title' && $contentRowKeys['lang'] === $defaultLang) {
-          $model['name'] = filter_var($contentRowValue['value'], FILTER_SANITIZE_STRING);
-        }
-      };
-    };
-    unset($model['contents']);
-    return $model;
-  }
-
-  private static function replaceData($model)
-  {
-    $modelClass = EntityBase::getDataClass($model['model']);
-    if (count($modelClass::$dataFields) > 0 && isset($model['data'])) {
-      $dataToInsert = ['id' => $model['id']];
-      foreach ($modelClass::$dataFields as $field) {
-        if (isset($model['data'][$field])) {
-          $dataToInsert[$field] = $model['data'][$field];
-        }
-      }
-      $modelClass::updateOrCreate(['id' => $model['id']], $dataToInsert);
-    };
-    unset($model['data']);
-    return $model;
   }
 
   /**
