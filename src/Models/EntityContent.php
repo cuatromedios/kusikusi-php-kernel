@@ -62,8 +62,14 @@ class EntityContent extends Model
 
   public static function reduce($entity) {
     $newContents = [];
-    foreach ($entity['contents'] as $content) {
-      $newContents[$content['field']] = $content['value'];
+    if (isset($entity['contents'])) {
+      foreach ($entity['contents'] as $content) {
+        $newContents[$content['field']] = $content['value'];
+      }
+    }
+    if (isset($entity['relations'])) {
+      $grouped = array_map("Cuatromedios\Kusikusi\Models\EntityContent::reduce", $entity['relations']);
+      $entity['relations'] = $grouped;
     }
     $entity["contents"] = $newContents;
     return($entity);

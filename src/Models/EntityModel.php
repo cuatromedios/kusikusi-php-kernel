@@ -142,9 +142,8 @@ class EntityModel extends KusikusiModel
   {
     return $this
         ->belongsToMany('App\Models\Entity', 'relations', 'caller_id', 'called_id')
-        ->without('relations')
         ->using('Cuatromedios\Kusikusi\Models\Relation')
-        ->as('relations')
+        ->as('relation')
         ->withPivot('kind', 'position', 'depth', 'tags')
         ->withTimestamps();
   }
