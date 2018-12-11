@@ -51,7 +51,7 @@ class EntityModel extends KusikusiModel
       'active' => 'boolean'
   ];
 
-  // protected $appends = ['contents'];
+  protected $appends = ['contents'];
   protected $hidden = ['relatedContents'];
 
   /**
@@ -93,7 +93,47 @@ class EntityModel extends KusikusiModel
     return $query->where('active', true)->where('publicated_at', '2000')->where('unpublicated_at', 2000)->where('deleted_at');
   }
 
+  /**
+   * The relations that belong to the entity.
+   */
+  public function relations()
+  {
+    return $this->belongsToMany('App\Models\Entity', 'relations', 'caller_id', 'called_id')
+        ->using('Cuatromedios\Kusikusi\Models\Relation')
+        ->as('relations')
+        ->withPivot('kind', 'position', 'tags')
+        ->withTimestamps();
+  }
 
+  /**
+   * Dinamically creates relations
+   */
+  public function addRelation($data)
+  {
+    if (isset($data['id'])) {
+      if (!isset($data['relation']['kind'])) {
+        $data['relation']['kind'] = 'relation';
+      }
+      if (!isset($data['relation']['position'])) {
+        $data['relation']['position'] = 0;
+      }
+      if (!isset($data['relation']['tags'])) {
+        $data['relation']['tags'] = '';
+      }
+      if (is_array($data['relation']['tags'])) {
+        $data['relation']['tags'] = implode(',', $data['tags']);
+      }
+      if (!isset($data['relation']['depth'])) {
+        $data['relation']['depth'] = 0;
+      }
+      if (count($this->relations()->where(['called_id' => $data['id'], 'kind' => $data['relation']['kind']])->get()) > 0) {
+        $this->relations()->updateExistingPivot($data['id'], $data['relation']);
+      } else {
+        $this->relations()->attach($data['id'], $data['relation']);
+      }
+      return ['id' => $this->id];
+    }
+  }
 
   /**
    * Returns an entity.
@@ -798,6 +838,7 @@ class EntityModel extends KusikusiModel
     parent::boot();
 
     self::creating(function ($model) {
+      // var_dump($model);
       if (!isset($model['model'])) {
         throw new \Exception('A model id is requiered to create a new entity', ApiResponse::STATUS_BADREQUEST);
       }
@@ -807,7 +848,16 @@ class EntityModel extends KusikusiModel
       // $model = EntityModel::replaceContent($model);
     });
 
-    self::created(function ($model) {
+    self::created(function ($entity) {
+      // Create the ancestors relations
+      if (isset($entity['parent_id']) && $entity['parent_id'] != NULL) {
+        $parentEntity = Entity::find($entity['parent_id']);
+        $entity->relations()->attach($parentEntity['id'], ['kind' => 'ancestor', 'depth' => 1]);
+        $ancestors = ($parentEntity->relations()->where('kind', 'ancestor')->orderBy('depth'))->get();
+        for ($a = 0; $a < count($ancestors); $a++) {
+          $entity->relations()->attach($ancestors[$a]['id'], ['kind' => 'ancestor', 'depth' => ($a + 2)]);
+        }
+      };
       // Create the related model
       /*$dataModelInfo = $model->toArray() ?? [];
       unset($model['root']);
@@ -905,21 +955,12 @@ class EntityModel extends KusikusiModel
 
     });
 
-
-    self::saved(function (EntityBase $entity) {
-      // Create the ancestors relations
-      if (isset($entity['parent']) && $entity['parent'] != '') {
-        $parentEntity = EntityBase::find($entity['parent']);
-        $entity->relations()->attach($parentEntity['id'], ['kind' => 'ancestor', 'depth' => 1]);
-        $ancestors = ($parentEntity->relations()->where('kind', 'ancestor')->orderBy('depth'))->get();
-        for ($a = 0; $a < count($ancestors); $a++) {
-          $entity->relations()->attach($ancestors[$a]['id'], ['kind' => 'ancestor', 'depth' => ($a + 2)]);
-        }
-      };
-      EntityBase::updateEntityVersion($entity['id']);
-    });*/
+    */
+    self::saved(function (Entity $entity) {
+      
+    });
   }
- /*
+
   private static function replaceContent($model)
   {
     if (isset($model['contents'])) {
@@ -959,8 +1000,7 @@ class EntityModel extends KusikusiModel
     unset($model['contents']);
     return $model;
   }
-  */
-  /*
+
   private static function replaceData($model)
   {
     $modelClass = EntityBase::getDataClass($model['model']);
@@ -976,7 +1016,6 @@ class EntityModel extends KusikusiModel
     unset($model['data']);
     return $model;
   }
-  */
 
   /**
    * Updates the entity version, tree version and full version of the given entity
