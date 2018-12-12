@@ -135,12 +135,17 @@ class EntityModel extends KusikusiModel
   }
 
 
+  /**************************
+   *
+   * SCOPES
+   *
+   **************************/
 
   /**
    * Scope a query to only include entities of a given modelId.
    *
    * @param  \Illuminate\Database\Eloquent\Builder $query
-   * @param  mixed $type
+   * @param  mixed $modelId
    * @return \Illuminate\Database\Eloquent\Builder
    */
   public function scopeOfModel($query, $modelId)
@@ -152,7 +157,6 @@ class EntityModel extends KusikusiModel
    * Scope a query to only include published entities.
    *
    * @param  \Illuminate\Database\Eloquent\Builder $query
-   * @param  mixed $type
    * @return \Illuminate\Database\Eloquent\Builder
    */
   public function scopeIsPublished($query)
@@ -160,6 +164,57 @@ class EntityModel extends KusikusiModel
     //TODO: Check correctrly the dates
     return $query->where('active', true)->where('publicated_at', '2000')->where('unpublicated_at', 2000)->where('deleted_at');
   }
+
+  /**
+   * Scope a query to only include childs of a given parent id.
+   *
+   * @param  \Illuminate\Database\Eloquent\Builder $query
+   * @param  string $entity_id The id of the parent entity
+   * @return \Illuminate\Database\Eloquent\Builder
+   */
+  public function scopeChildOf($query, $parent_id)
+  {
+    return $query->where('parent_id', $parent_id);
+  }
+
+  /**
+   * Scope a query to only include entities of a given modelId.
+   *
+   * @param  \Illuminate\Database\Eloquent\Builder $query
+   * @param  string $entity_id The id of the Entity
+   * @return \Illuminate\Database\Eloquent\Builder
+   */
+  public function scopeWithContents($query)
+  {
+    $content_fields = params_as_array(func_get_args(), 1);
+    if (count($content_fields) == 0) {
+      $query->with('contents');
+    } else {
+      $query->with(['contents' => function($query) use ($content_fields) {
+        $first = true;
+        foreach ($content_fields as $field) {
+          print "***** {$field}";
+          if ($first) {
+            $query->where('field', '=', $field);
+            $first = false;
+          } else {
+            $query->orWhere('field', '=', $field);
+          }
+        }
+      }]);
+    }
+
+    return $query;
+  }
+
+
+
+
+  /**************************
+   *
+   * RELATIONS
+   *
+   **************************/
 
   /**
    * The relations that belong to the entity.
