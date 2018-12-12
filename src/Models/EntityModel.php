@@ -4,10 +4,7 @@ namespace Cuatromedios\Kusikusi\Models;
 
 use App\Models\Entity;
 use Cuatromedios\Kusikusi\Models\Http\ApiResponse;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
-use Ramsey\Uuid\Uuid;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -89,10 +86,22 @@ class EntityModel extends KusikusiModel
     return $this->hasMany('Cuatromedios\Kusikusi\Models\EntityContent', 'entity_id');
   }
 
-  public function addContents($contents)
+  /**
+   * Adds content rows to an Entity.
+   *
+   * @param  array $contents An arrray of one or more contents in field => value format for example ["title" => "The Title", "summary", "The Summary"]
+   * @param  string $lang optional language code, for example "en" or "es-mx"
+   * @return \Illuminate\Database\Eloquent\Builder
+   */
+  public function addContents($contents, $lang = NULL)
   {
+    $lang = $lang ?? $this->_lang ?? Config::get('cms.langs')[0] ?? '';
     foreach ($contents as $key=>$value) {
-      $this->contents()->save(new EntityContent([$key => $value]));
+      $this->contents()->save(new EntityContent([
+          "field" => $key,
+          "value" => $value,
+          "lang" => $lang
+      ]));
     }
   }
 
