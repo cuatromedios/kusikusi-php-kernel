@@ -193,7 +193,6 @@ class EntityModel extends KusikusiModel
       $query->with(['contents' => function($query) use ($content_fields) {
         $first = true;
         foreach ($content_fields as $field) {
-          print "***** {$field}";
           if ($first) {
             $query->where('field', '=', $field);
             $first = false;
