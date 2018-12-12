@@ -3,6 +3,7 @@
 namespace Cuatromedios\Kusikusi\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Config;
 
 class EntityContent extends Model
@@ -42,7 +43,6 @@ class EntityContent extends Model
     return $this->belongsTo('App\Models\Entity');
   }
 
-
   /**
    * The attributes that are mass assignable.
    *
@@ -52,7 +52,6 @@ class EntityContent extends Model
       'id', 'entity_id', 'lang', 'field', 'value'
   ];
 
-
   /**
    * The attributes excluded from the model's JSON form.
    *
@@ -60,19 +59,35 @@ class EntityContent extends Model
    */
   protected $hidden = ['id'];
 
-  public static function reduce($entity) {
-    $newContents = [];
-    if (isset($entity['contents'])) {
-      foreach ($entity['contents'] as $content) {
-        $newContents[$content['field']] = $content['value'];
+
+  private static function compactContentsFields($entityOrCollection) {
+    if (array_keys($entityOrCollection) !== range(0, count($entityOrCollection) - 1)) {
+      $newContents = [];
+      if (isset($entityOrCollection['contents'])) {
+        foreach ($entityOrCollection['contents'] as $content) {
+          $newContents[$content['field']] = $content['value'];
+        }
       }
+      if (isset($entityOrCollection['relations'])) {
+        $grouped = EntityContent::compact($entityOrCollection['relations']);
+        $entityOrCollection['relations'] = $grouped;
+      }
+      if (isset($entityOrCollection['entity'])) {
+        $grouped = EntityContent::compact($entityOrCollection['entity']);
+        $entityOrCollection['entity'] = $grouped;
+      }
+      $entityOrCollection["contents"] = $newContents;
+      return $entityOrCollection;
+    } else {
+      return  array_map("Cuatromedios\Kusikusi\Models\EntityContent::compactContentsFields", $entityOrCollection);
     }
-    if (isset($entity['relations'])) {
-      $grouped = array_map("Cuatromedios\Kusikusi\Models\EntityContent::reduce", $entity['relations']);
-      $entity['relations'] = $grouped;
+  }
+
+  public static function compact($entityOrCollection) {
+    if (!is_array($entityOrCollection)) {
+      $entityOrCollection = $entityOrCollection->toArray();
     }
-    $entity["contents"] = $newContents;
-    return($entity);
+    return EntityContent::compactContentsFields($entityOrCollection);
   }
 
   public static function boot($preset = [])
