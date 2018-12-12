@@ -200,7 +200,7 @@ class EntityModel extends KusikusiModel
    * Scope a query to only include entities of a given modelId.
    *
    * @param  \Illuminate\Database\Eloquent\Builder $query
-   * @param  string $entity_id The id of the Entity
+   * @param  string $content_fields The id of the Entity
    * @return \Illuminate\Database\Eloquent\Builder
    */
   public function scopeWithContents($query)
@@ -224,9 +224,26 @@ class EntityModel extends KusikusiModel
 
     return $query;
   }
+  /**
+   * Scope a query to only include relations having specific tags.
+   *
+   * @param  \Illuminate\Database\Eloquent\Builder $query
+   * @return \Illuminate\Database\Eloquent\Builder
+   */
+  public function scopeWhereTags($query)
+  {
+    $tags = join(" ", params_as_array(func_get_args(), 1));
+    $query->whereRaw("MATCH (tags) AGAINST (? IN BOOLEAN MODE)" , $tags);
+    return $query;
+  }
 
 
-
+  public function scopeWithRelations($query, $function = NULL) {
+    if (NULL == $function) {
+      return $query->with("relations");
+    }
+    return $query->with(["relations" => $function]);
+  }
 
   /**************************
    *
