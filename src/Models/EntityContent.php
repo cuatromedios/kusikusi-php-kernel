@@ -32,7 +32,7 @@ class EntityContent extends Model
    *
    * @var bool
    */
-  public $timestamps = false;
+  public $timestamps = true;
 
   /**
    * Get the EntityBase that owns the content.
@@ -49,7 +49,7 @@ class EntityContent extends Model
    * @var array
    */
   protected $fillable = [
-      'entity_id', 'lang', 'field', 'value'
+      'id', 'entity_id', 'lang', 'field', 'value'
   ];
 
 
@@ -82,7 +82,7 @@ class EntityContent extends Model
 
     self::saving(function ($model) {
       foreach ($model->attributes as $key=>$value) {
-        if (! in_array($key, $model->fillable)) {
+        if ( $key != "created_at" && $key != "updated_at" && ! in_array($key, $model->fillable)) {
           $model->attributes['field'] = $key;
           $model->attributes['value'] = $value;
           unset($model->attributes[$key]);

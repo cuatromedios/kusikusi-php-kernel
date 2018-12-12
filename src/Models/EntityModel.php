@@ -91,22 +91,39 @@ class EntityModel extends KusikusiModel
    *
    * @param  array $contents An arrray of one or more contents in field => value format for example ["title" => "The Title", "summary", "The Summary"]
    * @param  string $lang optional language code, for example "en" or "es-mx"
-   * @return \Illuminate\Database\Eloquent\Builder
    */
   public function addContents($contents, $lang = NULL)
   {
     $lang = $lang ?? $this->_lang ?? Config::get('cms.langs')[0] ?? '';
     foreach ($contents as $key=>$value) {
-      $this->contents()->save(new EntityContent([
-          "field" => $key,
-          "value" => $value,
-          "lang" => $lang
-      ]));
+      EntityContent::updateOrCreate(
+          [
+            "id" => "{$this->id}_{$lang}_{$key}"
+          ], [
+            "entity_id" => $this->id,
+            "field" => $key,
+            "value" => $value,
+            "lang" => $lang
+          ]);
     }
   }
-
-  public function getContentsAttribute($contents) {
-    return ("Naaa");
+  /**
+   * Deletes content rows to an Entity.
+   *
+   * @param  array $fields An arrray of one or more field names
+   * @param  string $lang optional language code, for example "en" or "es-mx"
+   */
+  public function deleteContents($fields, $lang = NULL)
+  {
+    if (is_string($fields)) {
+      $fields = [$fields];
+    }
+    $lang = $lang ?? $this->_lang ?? Config::get('cms.langs')[0] ?? '';
+    $idstodelete = [];
+    foreach ($fields as $field) {
+      $idstodelete[] = "{$this->id}_{$lang}_{$field}";
+    }
+    EntityContent::destroy($idstodelete);
   }
 
   public function getLang() {
