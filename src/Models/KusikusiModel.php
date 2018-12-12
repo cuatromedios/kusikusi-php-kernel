@@ -3,6 +3,7 @@
 namespace Cuatromedios\Kusikusi\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Cuatromedios\Kusikusi\Models\KusikusiCollection;
 use Ramsey\Uuid\Uuid;
 
 class KusikusiModel extends Model
@@ -56,6 +57,17 @@ class KusikusiModel extends Model
   public function activity()
   {
     return $this->hasMany('Cuatromedios\Kusikusi\Models\Activity', 'entity_id');
+  }
+
+  /**
+   * Create a new Eloquent Collection instance.
+   *
+   * @param  array  $models
+   * @return \Cuatromedios\Kusikusi\Models\KusikusiCollection
+   */
+  public function newCollection(array $models = [])
+  {
+    return new KusikusiCollection($models);
   }
 
 }

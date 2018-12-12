@@ -126,6 +126,25 @@ class EntityModel extends KusikusiModel
     EntityContent::destroy($idstodelete);
   }
 
+  public static function compact($array) {
+    //TODO: This may be very inneficient :S
+    if (!is_array($array)) {
+      $array = $array->toArray();
+    }
+    foreach ($array as $key => $value) {
+      if ($key === "contents") {
+        $compactedContents = [];
+        foreach ($value as $content) {
+          $compactedContents[$content['field']] = $content['value'];
+        };
+        $array[$key] = $compactedContents;
+      } else if (is_array($value)) {
+        $array[$key] = EntityModel::compact($value);
+      }
+    }
+    return $array;
+  }
+
   public function getLang() {
     return $this->_lang;
   }
@@ -283,11 +302,9 @@ class EntityModel extends KusikusiModel
       if (isset($entity['parent_id']) && $entity['parent_id'] != NULL) {
         $parentEntity = Entity::find($entity['parent_id']);
         $entity->addRelation(['id' =>$parentEntity['id'], 'kind' => 'ancestor', 'depth' => 1]);
-        //$entity->relations()->attach($parentEntity['id'], ['kind' => 'ancestor', 'depth' => 1, 'tags' => ['a']]);
         $ancestors = ($parentEntity->relations()->where('kind', 'ancestor')->orderBy('depth'))->get();
         for ($a = 0; $a < count($ancestors); $a++) {
           $entity->addRelation(['id' => $ancestors[$a]['id'], 'kind' => 'ancestor', 'depth' => ($a + 2)]);
-          //$entity->relations()->attach($ancestors[$a]['id'], ['kind' => 'ancestor', 'depth' => ($a + 2), 'tags' => '']);
         }
       };
     });

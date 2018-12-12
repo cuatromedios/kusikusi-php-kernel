@@ -57,38 +57,9 @@ class EntityContent extends Model
    *
    * @var array
    */
-  protected $hidden = ['id'];
+  protected $hidden = ['id', 'created_at', 'updated_at'];
 
 
-  private static function compactContentsFields($entityOrCollection) {
-    if (array_keys($entityOrCollection) !== range(0, count($entityOrCollection) - 1)) {
-      $newContents = [];
-      if (isset($entityOrCollection['contents'])) {
-        foreach ($entityOrCollection['contents'] as $content) {
-          $newContents[$content['field']] = $content['value'];
-        }
-      }
-      if (isset($entityOrCollection['relations'])) {
-        $grouped = EntityContent::compact($entityOrCollection['relations']);
-        $entityOrCollection['relations'] = $grouped;
-      }
-      if (isset($entityOrCollection['entity'])) {
-        $grouped = EntityContent::compact($entityOrCollection['entity']);
-        $entityOrCollection['entity'] = $grouped;
-      }
-      $entityOrCollection["contents"] = $newContents;
-      return $entityOrCollection;
-    } else {
-      return  array_map("Cuatromedios\Kusikusi\Models\EntityContent::compactContentsFields", $entityOrCollection);
-    }
-  }
-
-  public static function compact($entityOrCollection) {
-    if (!is_array($entityOrCollection)) {
-      $entityOrCollection = $entityOrCollection->toArray();
-    }
-    return EntityContent::compactContentsFields($entityOrCollection);
-  }
 
   public static function boot($preset = [])
   {
