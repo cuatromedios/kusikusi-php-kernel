@@ -243,10 +243,10 @@ class EntityModel extends KusikusiModel
         $data['position'] = 0;
       }
       if (!isset($data['tags'])) {
-        $data['tags'] = '';
+        $data['tags'] = [];
       }
-      if (is_array($data['tags'])) {
-        $data['tags'] = implode(',', $data['tags']);
+      if (is_string($data['tags'])) {
+        $data['tags'] = explode(',', $data['tags']);
       }
       if (!isset($data['depth'])) {
         $data['depth'] = 0;
@@ -282,10 +282,12 @@ class EntityModel extends KusikusiModel
       // Create the ancestors relations
       if (isset($entity['parent_id']) && $entity['parent_id'] != NULL) {
         $parentEntity = Entity::find($entity['parent_id']);
-        $entity->relations()->attach($parentEntity['id'], ['kind' => 'ancestor', 'depth' => 1]);
+        $entity->addRelation(['id' =>$parentEntity['id'], 'kind' => 'ancestor', 'depth' => 1]);
+        //$entity->relations()->attach($parentEntity['id'], ['kind' => 'ancestor', 'depth' => 1, 'tags' => ['a']]);
         $ancestors = ($parentEntity->relations()->where('kind', 'ancestor')->orderBy('depth'))->get();
         for ($a = 0; $a < count($ancestors); $a++) {
-          $entity->relations()->attach($ancestors[$a]['id'], ['kind' => 'ancestor', 'depth' => ($a + 2)]);
+          $entity->addRelation(['id' => $ancestors[$a]['id'], 'kind' => 'ancestor', 'depth' => ($a + 2)]);
+          //$entity->relations()->attach($ancestors[$a]['id'], ['kind' => 'ancestor', 'depth' => ($a + 2), 'tags' => '']);
         }
       };
     });
