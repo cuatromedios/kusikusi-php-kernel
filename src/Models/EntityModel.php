@@ -54,6 +54,8 @@ class EntityModel extends KusikusiModel
       'created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by', 'publicated_at', 'unpublicated_at', 'entity_version', 'tree_version', 'relations_version', 'full_version'
   ];
 
+  protected $hidden = ['tags', 'depth', 'position', 'kind', 'caller_id', 'called_id'];
+
   /**
    * Active attribute should be casted to boolean
    * @var array
@@ -197,6 +199,26 @@ class EntityModel extends KusikusiModel
   }
 
   /**
+   * Scope a query to only include childs of a given parent id.
+   *
+   * @param  \Illuminate\Database\Eloquent\Builder $query
+   * @param  string $entity_id The id of the parent entity
+   * @return \Illuminate\Database\Eloquent\Builder
+   */
+  public function scopeAncestorOf($query, $entity_id, $order = 'desc')
+  {
+    if ($order != 'asc') {
+      $order = 'desc';
+    }
+    $query->join('relations', function ($join) use ($entity_id) {
+      $join->on('called_id', '=', 'entities.id')
+          ->where('caller_id', '=', $entity_id)
+          ->where('kind', '=', 'ancestor')
+          ;
+    })->orderBy('depth', $order);
+  }
+
+  /**
    * Scope a query to only include entities of a given modelId.
    *
    * @param  \Illuminate\Database\Eloquent\Builder $query
@@ -237,13 +259,19 @@ class EntityModel extends KusikusiModel
     return $query;
   }
 
-
+  /**
+   * Appends relations of an Entity.
+   *
+   * @param  \Illuminate\Database\Eloquent\Builder $query
+   * @return function Function that receives and returns a query
+   */
   public function scopeWithRelations($query, $function = NULL) {
     if (NULL == $function) {
       return $query->with("relations");
     }
     return $query->with(["relations" => $function]);
   }
+
 
   /**************************
    *
