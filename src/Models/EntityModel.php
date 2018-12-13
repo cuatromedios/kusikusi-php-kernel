@@ -253,6 +253,31 @@ class EntityModel extends KusikusiModel
     return $query;
   }
 
+  /**
+   * Scope a query include relations of type medium.
+   *
+   * @param  \Illuminate\Database\Eloquent\Builder $query
+   * @param  string $tags The id of the Entity
+   * @return \Illuminate\Database\Eloquent\Builder
+   */
+  public function scopeWithMedia($query, $tags = NULL)
+  {
+    $tags = params_as_array(func_get_args(), 1);
+    $query->withRelations(function($query) use ($tags) {
+      $query->select('id')
+          ->whereModel('medium')
+          ->whereKind('medium');
+          if (count($tags) > 0) {
+            $query->whereTags($tags);
+          }
+          $query->with(['medium' => function($query) {
+          }])
+          ->orderBy('position', 'asc')
+          ->withContents('title');
+    });
+    return $query;
+  }
+
 
   /**
    * Scope a query to order by a content field.
