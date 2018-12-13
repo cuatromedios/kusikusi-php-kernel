@@ -195,7 +195,13 @@ class EntityModel extends KusikusiModel
    */
   public function scopeChildOf($query, $parent_id)
   {
-    return $query->where('parent_id', $parent_id);
+    $query->join('relations', function ($join) use ($parent_id) {
+      $join->on('caller_id', '=', 'id')
+          ->where('called_id', '=', $parent_id)
+          ->where('depth', '=', 1)
+          ->where('kind', '=', 'ancestor')
+      ;
+    });
   }
 
   /**
@@ -211,7 +217,7 @@ class EntityModel extends KusikusiModel
       $order = 'desc';
     }
     $query->join('relations', function ($join) use ($entity_id) {
-      $join->on('called_id', '=', 'entities.id')
+      $join->on('called_id', '=', 'id')
           ->where('caller_id', '=', $entity_id)
           ->where('kind', '=', 'ancestor')
           ;
@@ -246,6 +252,30 @@ class EntityModel extends KusikusiModel
 
     return $query;
   }
+
+
+  /**
+   * Scope a query to order by a content field.
+   *
+   * @param  \Illuminate\Database\Eloquent\Builder $query
+   * @param  string $content_fields The id of the Entity
+   * @return \Illuminate\Database\Eloquent\Builder
+   */
+  public function scopeOrderByContents($query, $field, $order = "asc")
+  {
+    if ($order != 'desc') {
+      $order = 'asc';
+    }
+    $query->join('contents as content_for_order', function ($join) use ($field) {
+      $join->on('content_for_order.entity_id', '=', 'entities.id')
+          ->where('field', '=', $field)
+      ;
+    });
+    //$query->addSelect("contents.value as orderField");
+    $query->orderBy("content_for_order.value", $order);
+  }
+
+
   /**
    * Scope a query to only include relations having specific tags.
    *
