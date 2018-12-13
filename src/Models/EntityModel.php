@@ -225,7 +225,7 @@ class EntityModel extends KusikusiModel
   }
 
   /**
-   * Scope a query to only include entities of a given modelId.
+   * Scope a query to include the contents.
    *
    * @param  \Illuminate\Database\Eloquent\Builder $query
    * @param  string $content_fields The id of the Entity
