@@ -234,12 +234,12 @@ class EntityModel extends KusikusiModel
     if ($order != 'asc') {
       $order = 'desc';
     }
-    $query->join('relations', function ($join) use ($entity_id) {
-      $join->on('called_id', '=', 'id')
-          ->where('caller_id', '=', $entity_id)
-          ->where('kind', '=', 'ancestor')
+    $query->join('relations as rel_anc', function ($join) use ($entity_id) {
+      $join->on('rel_anc.called_id', '=', 'id')
+          ->where('rel_anc.caller_id', '=', $entity_id)
+          ->where('rel_anc.kind', '=', 'ancestor')
           ;
-    })->orderBy('depth', $order);
+    })->orderBy('rel_anc.depth', $order);
   }
 
   /**
@@ -257,13 +257,13 @@ class EntityModel extends KusikusiModel
     if ($depth == NULL) {
       $depth = 99;
     }
-    $query->join('relations', function ($join) use ($entity_id, $depth) {
-      $join->on('caller_id', '=', 'id')
-          ->where('called_id', '=', $entity_id)
-          ->where('kind', '=', 'ancestor')
-          ->where('depth', '<=', $depth)
+    $query->join('relations as rel_des', function ($join) use ($entity_id, $depth) {
+      $join->on('rel_des.caller_id', '=', 'id')
+          ->where('rel_des.called_id', '=', $entity_id)
+          ->where('rel_des.kind', '=', 'ancestor')
+          ->where('rel_des.depth', '<=', $depth)
           ;
-    })->orderBy('depth', $order);
+    })->orderBy('rel_des.depth', $order);
   }
 
   /**
