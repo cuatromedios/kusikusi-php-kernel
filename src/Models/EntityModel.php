@@ -187,7 +187,7 @@ class EntityModel extends KusikusiModel
   }
 
   /**
-   * Scope a query to only include childs of a given parent id.
+   * Scope a query to only include children of a given parent id.
    *
    * @param  \Illuminate\Database\Eloquent\Builder $query
    * @param  string $entity_id The id of the parent entity
@@ -205,7 +205,25 @@ class EntityModel extends KusikusiModel
   }
 
   /**
-   * Scope a query to only include childs of a given parent id.
+   * Scope a query to only include the parent of the given id.
+   *
+   * @param  \Illuminate\Database\Eloquent\Builder $query
+   * @param  string $entity_id The id of the parent entity
+   * @return \Illuminate\Database\Eloquent\Builder
+   */
+  public function scopeParentOf($query, $id)
+  {
+    $query->join('relations', function ($join) use ($id) {
+      $join->on('called_id', '=', 'id')
+          ->where('caller_id', '=', $id)
+          ->where('depth', '=', 1)
+          ->where('kind', '=', 'ancestor')
+      ;
+    });
+  }
+
+  /**
+   * Scope a query to only include ancestors of a given entity.
    *
    * @param  \Illuminate\Database\Eloquent\Builder $query
    * @param  string $entity_id The id of the parent entity
@@ -220,6 +238,30 @@ class EntityModel extends KusikusiModel
       $join->on('called_id', '=', 'id')
           ->where('caller_id', '=', $entity_id)
           ->where('kind', '=', 'ancestor')
+          ;
+    })->orderBy('depth', $order);
+  }
+
+  /**
+   * Scope a query to only include children of a given parent id.
+   *
+   * @param  \Illuminate\Database\Eloquent\Builder $query
+   * @param  string $entity_id The id of the parent entity
+   * @return \Illuminate\Database\Eloquent\Builder
+   */
+  public function scopeDescendantOf($query, $entity_id, $order = 'desc', $depth = NULL)
+  {
+    if ($order != 'asc') {
+      $order = 'desc';
+    }
+    if ($depth == NULL) {
+      $depth = 99;
+    }
+    $query->join('relations', function ($join) use ($entity_id, $depth) {
+      $join->on('caller_id', '=', 'id')
+          ->where('called_id', '=', $entity_id)
+          ->where('kind', '=', 'ancestor')
+          ->where('depth', '<=', $depth)
           ;
     })->orderBy('depth', $order);
   }
@@ -327,6 +369,18 @@ class EntityModel extends KusikusiModel
     return $query->with(["relations" => $function]);
   }
 
+  /**
+   * Appends the parent of an Entity.
+   *
+   * @param  \Illuminate\Database\Eloquent\Builder $query
+   * @return function Function that receives and returns a query
+   */
+  public function scopeWithParent($query, $function = NULL) {
+    if (NULL == $function) {
+      return $query->with("parent");
+    }
+    return $query->with(["parent" => $function]);
+  }
 
   /**************************
    *
@@ -345,6 +399,15 @@ class EntityModel extends KusikusiModel
         ->as('relation')
         ->withPivot('kind', 'position', 'depth', 'tags')
         ->withTimestamps();
+  }
+
+  /**
+   * The parent of the entity.
+   */
+  public function parent()
+  {
+    return $this
+        ->belongsTo('App\Models\Entity', 'parent_id');
   }
 
   /**
