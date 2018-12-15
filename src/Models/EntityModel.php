@@ -419,6 +419,7 @@ class EntityModel extends KusikusiModel
    * @return function Function that receives and returns a query
    */
   public function scopeWithParent($query, $function = NULL) {
+    $query->addSelect('parent_id');
     if (NULL == $function) {
       return $query->with('parent');
     }
