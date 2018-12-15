@@ -7,6 +7,7 @@ use Cuatromedios\Kusikusi\Models\Http\ApiResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Config;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Carbon\Carbon;
 
 class EntityModel extends KusikusiModel
 {
@@ -154,6 +155,26 @@ class EntityModel extends KusikusiModel
   public function setLang($lang) {
     $this->_lang = $lang;
   }
+  
+  /**************************
+   * 
+   * ACCESORS
+   * 
+   *************************/
+
+   /**
+    * Creates a virtual field where it determinates whether the entity is published or not
+    *
+    * @return boolean
+    */
+    public function getPublishedAttribute()
+    {
+      $currentDate = Carbon::now();
+      if ($this->active === true && $this->publicated_at <= $currentDate && $this->unpublicated_at > $currentDate && $this->deleted_at === NULL) {
+        return true;
+      }
+      return false;
+    }
 
 
   /**************************
@@ -182,8 +203,7 @@ class EntityModel extends KusikusiModel
    */
   public function scopeIsPublished($query)
   {
-    //TODO: Check correctrly the dates
-    return $query->where('active', true)->where('publicated_at', '2000')->where('unpublicated_at', 2000)->where('deleted_at');
+    return $query->where('active', true)->whereDate('publicated_at', '<=', Carbon::now())->whereDate('unpublicated_at', '>', Carbon::now())->where('deleted_at');
   }
 
   /**
@@ -195,11 +215,11 @@ class EntityModel extends KusikusiModel
    */
   public function scopeChildOf($query, $parent_id)
   {
-    $query->join('relations', function ($join) use ($parent_id) {
-      $join->on('caller_id', '=', 'id')
-          ->where('called_id', '=', $parent_id)
-          ->where('depth', '=', 1)
-          ->where('kind', '=', 'ancestor')
+    $query->join('relations as rel_child', function ($join) use ($parent_id) {
+      $join->on('rel_child.caller_id', '=', 'id')
+          ->where('rel_child.called_id', '=', $parent_id)
+          ->where('rel_child.depth', '=', 1)
+          ->where('rel_child.kind', '=', 'ancestor')
       ;
     });
   }
@@ -213,11 +233,11 @@ class EntityModel extends KusikusiModel
    */
   public function scopeParentOf($query, $id)
   {
-    $query->join('relations', function ($join) use ($id) {
-      $join->on('called_id', '=', 'id')
-          ->where('caller_id', '=', $id)
-          ->where('depth', '=', 1)
-          ->where('kind', '=', 'ancestor')
+    $query->join('relations as rel_par', function ($join) use ($id) {
+      $join->on('rel_par.called_id', '=', 'id')
+          ->where('rel_par.caller_id', '=', $id)
+          ->where('rel_par.depth', '=', 1)
+          ->where('rel_par.kind', '=', 'ancestor')
       ;
     });
   }
@@ -265,6 +285,25 @@ class EntityModel extends KusikusiModel
           ;
     })->orderBy('rel_des.depth', $order);
   }
+
+  /**
+   * Scope a query to only include relations where the given id is called.
+   *
+   * @param  \Illuminate\Database\Eloquent\Builder $query
+   * @param  string $entity_id The id of the parent entity
+   * @return \Illuminate\Database\Eloquent\Builder
+   */
+  // public function scopeInverseRelationsOf($query, $entity_id, $order = 'desc')
+  // {
+  //   if ($order != 'asc') {
+  //     $order = 'desc';
+  //   }
+  //   $query->join('relations as rel_invR', function ($join) use ($entity_id) {
+  //     $join->on('rel_invR.caller_id', '=', 'id')
+  //         ->where('rel_invR.called_id', '=', $entity_id)
+  //         ;
+  //   })->orderBy('rel_invR.depth', $order);
+  // }
 
   /**
    * Scope a query to include the contents.
@@ -370,6 +409,19 @@ class EntityModel extends KusikusiModel
   }
 
   /**
+   * Appends inverse relations of an Entity.
+   *
+   * @param  \Illuminate\Database\Eloquent\Builder $query
+   * @return function Function that receives and returns a query
+   */
+  public function scopeWithInverseRelations($query, $function = NULL) {
+    if (NULL == $function) {
+      return $query->with("inverseRelations");
+    }
+    return $query->with(["inverseRelations" => $function]);
+  }
+
+  /**
    * Appends the parent of an Entity.
    *
    * @param  \Illuminate\Database\Eloquent\Builder $query
@@ -377,9 +429,22 @@ class EntityModel extends KusikusiModel
    */
   public function scopeWithParent($query, $function = NULL) {
     if (NULL == $function) {
-      return $query->with("parent");
+      return $query->with('parent');
     }
-    return $query->with(["parent" => $function]);
+    return $query->with(["parent" => $function])
+        ->WithRelationData(function($filter) {
+          $filter->where('called_id', $this->parent_id);
+        });
+  }
+
+  /**
+   * Appends relation data of an Entity
+   */
+  public function scopeWithRelationData($query, $function = NULL) {
+    if (NULL == $function) {
+      return $query->with("relationData");
+    }
+    return $query->with(["relationData" => $function]);
   }
 
   /**************************
@@ -402,12 +467,34 @@ class EntityModel extends KusikusiModel
   }
 
   /**
+   * The inverse relations that belong to the entity.
+   */
+  public function inverseRelations()
+  {
+    return $this
+        ->belongsToMany('App\Models\Entity', 'relations', 'called_id', 'caller_id')
+        ->using('Cuatromedios\Kusikusi\Models\Relation')
+        ->as('inverseRelations')
+        ->withPivot('kind', 'position', 'depth', 'tags')
+        ->withTimestamps();
+  }
+
+  /**
    * The parent of the entity.
    */
   public function parent()
   {
     return $this
         ->belongsTo('App\Models\Entity', 'parent_id');
+  }
+
+  /**
+   * The relation data between two entities
+   */
+  public function relationData()
+  {
+    return $this
+        ->hasMany('Cuatromedios\Kusikusi\Models\Relation', 'called_id');
   }
 
   /**
@@ -438,7 +525,91 @@ class EntityModel extends KusikusiModel
       } else {
         $this->relations()->attach($id, $data);
       }
+      self::updateRelationVersion($this->id, $id);
       return ['id' => $id];
+    }
+  }
+
+  /**
+   * Updates the entity version, tree version and full version of the given entity
+   * as well as it´s ancestors (and inverse relations)
+   * @param $id
+   */
+  private static function updateEntityVersion($entity_id)
+  {
+    // Updates the version of the own entity and its full version as well
+    DB::table('entities')
+        ->where('id', $entity_id)
+        ->increment('entity_version');
+    DB::table('entities')
+        ->where('id', $entity_id)
+        ->increment('full_version');
+    // Then the three version (and full version), using its ancestors
+    $ancestors = Entity::select()->ancestorOf($entity_id)->get();
+    if (!empty($ancestors)) {
+      foreach ($ancestors as $ancestor) {
+        DB::table('entities')
+          ->where('id', $ancestor['id'])
+          ->increment('tree_version');
+        DB::table('entities')
+          ->where('id', $ancestor['id'])
+          ->increment('full_version');
+      }
+    }
+
+    // Now updates the tree and full version of the relations entity's ancestors and the relation version of the given entity
+    $relateds = Entity::where('id', $entity_id)->withInverseRelations()->get()->compact();
+    if (count($relateds[0]['inverse_relations']) > 0) {
+      foreach ($relateds[0]['inverse_relations'] as $related) {
+        $ancestors = Entity::select()->ancestorOf($related['id'])->get();
+        if (!empty($ancestors)) {
+          foreach ($ancestors as $ancestor) {
+            DB::table('entities')
+              ->where('id', $ancestor['id'])
+              ->increment('tree_version');
+            DB::table('entities')
+              ->where('id', $ancestor['id'])
+              ->increment('full_version');
+          }
+        }
+        DB::table('entities')
+          ->where('id', $related['id'])
+          ->increment('relations_version');
+      }
+    }
+  }
+
+  /**
+   * Updates the relation version of the caller entity and updates
+   * the tree version and full version of the called entity and it's
+   * ancestors
+   * @param $caller
+   * @param $called
+   */
+  private static function updateRelationVersion($caller, $called)
+  {
+    // Update the tree and full version of the called entity (and it's ancestors)
+    $relateds = Entity::where('id', $called)->withInverseRelations()->get()->compact();
+    if (!empty($related)) {
+      if (count($relateds[0]['inverse_relations']) > 0) {
+        foreach ($relateds[0]['inverse_relations'] as $related) {
+          $ancestors = Entity::select()->ancestorOf($related['id'])->get();
+          if (!empty($ancestors)) {
+            foreach ($ancestors as $ancestor) {
+                DB::table('entities')
+                 ->where('id', $ancestor['id'])
+                 ->increment('tree_version');
+                DB::table('entities')
+                 ->where('id', $ancestor['id'])
+                 ->increment('full_version');
+            }
+          }
+        }
+        // Now update the relation_version of the caller entity
+        DB::table('entities')->whereIn('id', $relateds[0]['inverse_relations'])
+        ->where('id', $caller)
+        ->increment('relations_version');
+      }
     }
   }
 
@@ -472,73 +643,11 @@ class EntityModel extends KusikusiModel
       };
     });
 
+    self::saved(function ($entity) {
+      self::updateEntityVersion($entity->id);
+    });
   }
 
-  /**
-   * Updates the entity version, tree version and full version of the given entity
-   * as well as it´s ancestors (and inverse relations)
-   * @param $entity
-   */
-  private static function updateEntityVersion($entity)
-  {
-    // Updates the version of the own entity and its full version as well
-    DB::table('entities')->where('id', $entity)
-        ->increment('entity_version');
-    DB::table('entities')->where('id', $entity)
-        ->increment('full_version');
-    // Then the three version (and full version), using its ancestors
-    $ancestors = self::getAncestors($entity, ['e.id']);
-    if (!empty($ancestors)) {
-      DB::table('entities')->whereIn('id', $ancestors)
-          ->increment('tree_version');
-      DB::table('entities')->whereIn('id', $ancestors)
-          ->increment('full_version');
-    }
-
-    // Now updates the tree and full version of the relations entity's ancestors and the relation version of the given entity
-    $relateds = self::getInverseEntityRelations($entity, NULL, ['e.id']);
-    foreach ($relateds as $related) {
-      $ancestors = self::getAncestors($related, ['e.id']);
-      if (!empty($ancestors)) {
-        DB::table('entities')->whereIn('id', $ancestors)
-            ->increment('tree_version');
-        DB::table('entities')->whereIn('id', $ancestors)
-            ->increment('full_version');
-      }
-    }
-    if (!empty($relateds)) {
-      DB::table('entities')->whereIn('id', $relateds)
-          ->increment('relations_version');
-    }
-  }
-
-  /**
-   * Updates the relation version of the caller entity and updates
-   * the tree version and full version of the called entity and it's
-   * ancestors
-   * @param $caller
-   * @param $called
-   */
-  private static function updateRelationVersion($caller, $called)
-  {
-    // Update the tree and full version of the called entity (and it's ancestors)
-    $relateds = self::getInverseEntityRelations($called, NULL, ['e.id']);
-    foreach ($relateds as $related) {
-      $ancestors = self::getAncestors($related, ['e.id']);
-      if (!empty($ancestors)) {
-        DB::table('entities')->whereIn('id', $ancestors)
-            ->increment('tree_version');
-        DB::table('entities')->whereIn('id', $ancestors)
-            ->increment('full_version');
-      }
-    }
-    // Now update the relation_version of the caller entity
-    if (!empty($relateds)) {
-      DB::table('entities')->whereIn('id', $relateds)
-          ->where('id', $caller)
-          ->increment('relations_version');
-    }
-  }
 
   /**
    *  Return a class from a string

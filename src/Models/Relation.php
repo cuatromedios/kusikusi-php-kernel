@@ -11,4 +11,10 @@ class Relation extends Pivot
       'tags' => 'array',
   ];
 
+  /**
+   * The table associated with the model.
+   *
+   * @var string
+   */
+  protected $table = 'relations';
 }
