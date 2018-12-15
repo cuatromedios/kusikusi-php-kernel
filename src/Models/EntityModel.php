@@ -80,15 +80,6 @@ class EntityModel extends KusikusiModel
   public $timestamps = true;
 
 
-
-  /**
-   * Set the contents relation of the EntityBase.
-   */
-  public function contents()
-  {
-    return $this->hasMany('Cuatromedios\Kusikusi\Models\EntityContent', 'entity_id');
-  }
-
   /**
    * Adds content rows to an Entity.
    *
@@ -453,6 +444,15 @@ class EntityModel extends KusikusiModel
    *
    **************************/
 
+
+  /**
+   * Set the contents relation of the EntityBase.
+   */
+  public function contents()
+  {
+    return $this->hasMany('Cuatromedios\Kusikusi\Models\EntityContent', 'entity_id');
+  }
+
   /**
    * The relations that belong to the entity.
    */
@@ -477,6 +477,14 @@ class EntityModel extends KusikusiModel
         ->as('inverseRelations')
         ->withPivot('kind', 'position', 'depth', 'tags')
         ->withTimestamps();
+  }
+
+  /**
+   * Get the activity related to the Entity.
+   */
+  public function activity()
+  {
+    return $this->hasMany('Cuatromedios\\Kusikusi\\Models\\Activity', 'entity_id');
   }
 
   /**
