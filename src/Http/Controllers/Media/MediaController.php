@@ -5,7 +5,7 @@ namespace Cuatromedios\Kusikusi\Http\Controllers\Media;
 use Cuatromedios\Kusikusi\Http\Controllers\Controller;
 use Cuatromedios\Kusikusi\Exceptions\ExceptionDetails;
 use Cuatromedios\Kusikusi\Models\Http\ApiResponse;
-use Cuatromedios\Kusikusi\Models\EntityBase;
+use App\Models\Entity;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Gate;
@@ -34,23 +34,24 @@ class MediaController extends Controller
      * @param $preset
      * @return Image
      */
-    public function get($id, $preset)
+    public function get($id, $preset, $friendly)
     {
+        //die("{$id} {$preset} {$friendly}");
         // TODO: Review if the user can read the media
         try {
-            $entity = EntityBase::getOne($id);
+            $entity = Entity::with('medium')->find($id);
         } catch (\Exception $e) {
-            Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => ApiResponse::TEXT_NOTFOUND]));
+            // Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => ApiResponse::TEXT_NOTFOUND]));
             return (new ApiResponse(NULL, FALSE, 'Media ' . ApiResponse::TEXT_NOTFOUND, ApiResponse::STATUS_NOTFOUND))->response();
         }
         $presetSettings = Config::get('media.presets.' . $preset, NULL);
         if (NULL === $presetSettings) {
-            Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => 'Preset ' . ApiResponse::TEXT_NOTFOUND]));
+          // Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => 'Preset ' . ApiResponse::TEXT_NOTFOUND]));
             return (new ApiResponse(NULL, FALSE, 'Preset ' . ApiResponse::TEXT_NOTFOUND, ApiResponse::STATUS_NOTFOUND))->response();
         }
 
         // Paths
-        $originalFilePath =   $id . '/file.' . $entity['data']['format'];
+        $originalFilePath =   $id . '/file.' . $entity->medium->format;
         $publicFilePath = $id . '/' .  $preset . '.' . $presetSettings['format'];
 
         // TODO:: We are returning from here the cached images, maybe use the webserver directly?
@@ -62,7 +63,7 @@ class MediaController extends Controller
             );
         }
         if (!$exists = Storage::disk('media_original')->exists($originalFilePath)) {
-            Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => 'Original media ' . ApiResponse::TEXT_NOTFOUND]));
+            // Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => 'Original media ' . ApiResponse::TEXT_NOTFOUND]));
             return (new ApiResponse(NULL, FALSE, 'Original media ' . ApiResponse::TEXT_NOTFOUND, ApiResponse::STATUS_NOTFOUND))->response();
         }
         $filedata = Storage::disk('media_original')->get($originalFilePath);
@@ -108,7 +109,7 @@ class MediaController extends Controller
         $image->encode($presetSettings['format'], $presetSettings['quality']);
         Storage::disk('media_processed')->put($publicFilePath, $image);
 
-        Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'get', '{}');
+        // Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'get', '{}');
         return $image->response();
     }
 }
