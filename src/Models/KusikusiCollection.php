@@ -23,6 +23,6 @@ class KusikusiCollection extends Collection
    */
   public function compact()
   {
-    return EntityModel::compact($this);
+    return EntityModel::compactContents($this);
   }
 }

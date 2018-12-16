@@ -55,14 +55,15 @@ class EntityModel extends KusikusiModel
       'created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by', 'publicated_at', 'unpublicated_at', 'entity_version', 'tree_version', 'relations_version', 'full_version'
   ];
 
-  protected $hidden = ['tags', 'depth', 'position', 'kind', 'caller_id', 'called_id'];
+  protected $hidden = ['caller_id', 'called_id'];
 
   /**
    * Active attribute should be casted to boolean
    * @var array
    */
   protected $casts = [
-      'active' => 'boolean'
+      'active' => 'boolean',
+      'tags' => 'array'
   ];
 
   /**
@@ -120,7 +121,11 @@ class EntityModel extends KusikusiModel
     EntityContent::destroy($idstodelete);
   }
 
-  public static function compact($array) {
+  public function compact() {
+    return EntityModel::compactContents($this);
+  }
+
+  public static function compactContents($array) {
     //TODO: This may be very inneficient :S
     if (!is_array($array)) {
       $array = $array->toArray();
@@ -133,7 +138,7 @@ class EntityModel extends KusikusiModel
         };
         $array[$key] = $compactedContents;
       } else if (is_array($value)) {
-        $array[$key] = EntityModel::compact($value);
+        $array[$key] = EntityModel::compactContents($value);
       }
     }
     return $array;
@@ -275,6 +280,42 @@ class EntityModel extends KusikusiModel
           ->where('rel_des.depth', '<=', $depth)
           ;
     })->orderBy('rel_des.depth', $order);
+  }
+
+  /**
+   * Scope a query to only get entities being called by.
+   *
+   * @param  \Illuminate\Database\Eloquent\Builder $query
+   * @param  string $entity_id The id of the entity calling the relations
+   * @return \Illuminate\Database\Eloquent\Builder
+   */
+  public function scopeRelatedBy($query, $entity_id)
+  {
+    $query->join('relations as rel_by', function ($join) use ($entity_id) {
+      $join->on('rel_by.called_id', '=', 'id')
+          ->where('rel_by.caller_id', '=', $entity_id)
+          ->where('rel_by.kind', '!=', 'ancestor');
+    })->addSelect('rel_by.kind', 'rel_by.position', 'rel_by.depth', 'rel_by.tags');
+  }
+
+  /**
+   * Scope a query to only get entities being called by another of type medium.
+   *
+   * @param  \Illuminate\Database\Eloquent\Builder $query
+   * @param  string $entity_id The id of the entity calling the relations
+   * @return \Illuminate\Database\Eloquent\Builder
+   */
+  public function scopeMediaOf($query, $entity_id)
+  {
+    $query->join('relations as rel_by', function ($join) use ($entity_id) {
+      $join->on('rel_by.called_id', '=', 'id')
+          ->where('rel_by.caller_id', '=', $entity_id)
+          ->where('rel_by.kind', '=', 'medium');
+    })
+        ->addSelect('id', 'model', 'rel_by.kind', 'rel_by.position', 'rel_by.depth', 'rel_by.tags')
+        ->orderBy('position')
+        ->withContents('title')
+        ->with('medium');
   }
 
   /**
