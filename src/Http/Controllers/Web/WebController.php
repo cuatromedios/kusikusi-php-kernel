@@ -32,11 +32,13 @@ class WebController extends Controller
     $query = ($request->query());
     $url = $request->path() == '/' ? '/' : '/' . $request->path();
     $format = strtolower(pathinfo($url, PATHINFO_EXTENSION));
+
     if ($format === '') {
       $format = 'html';
     } else {
       $url = substr($url, 0, strrpos($url, "."));
     }
+    $url = preg_replace('/\/index$/', '', $url);$filename = strtolower(pathinfo($url, PATHINFO_FILENAME));
 
     // Search for the entity is being called by its url, ignore inactive and soft deleted.
     $search_result = EntityContent::where([["value", "=", $url], ["field", "=", "url"]])->first();
