@@ -39,7 +39,7 @@ class MediaController extends Controller
         //die("{$id} {$preset} {$friendly}");
         // TODO: Review if the user can read the media
         try {
-            $entity = Entity::with('medium')->find($id);
+            $entity = Entity::with('medium')->findOrFail($id);
         } catch (\Exception $e) {
             // Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => ApiResponse::TEXT_NOTFOUND]));
             return (new ApiResponse(NULL, FALSE, 'Media ' . ApiResponse::TEXT_NOTFOUND, ApiResponse::STATUS_NOTFOUND))->response();
