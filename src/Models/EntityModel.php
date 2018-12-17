@@ -137,9 +137,22 @@ class EntityModel extends KusikusiModel
           $compactedContents[$content['field']] = $content['value'];
         };
         $array[$key] = $compactedContents;
+      } else if ($key === 'model' && $value === 'medium' && isset($array['contents']) && isset($array['medium'])) {
+        $result = array_search('title', array_column($array['contents'], 'field'));
+        if ($result !== FALSE) {
+          $slug = str_slug($array['contents'][0]['value']);
+        } else {
+          $slug = "media";
+        }
+        foreach (Config::get('media.presets') as $presetKey => $presetValue) {
+          $array['medium'][$presetKey] = "/media/{$array['medium']['id']}/{$presetKey}/{$slug}.{$presetValue['format']}";
+        }
+      } else if ($key === 'medium') {
+
       } else if (is_array($value)) {
         $array[$key] = EntityModel::compactContents($value);
       }
+
     }
     return $array;
   }
@@ -307,12 +320,12 @@ class EntityModel extends KusikusiModel
    */
   public function scopeMediaOf($query, $entity_id)
   {
-    $query->join('relations as rel_by', function ($join) use ($entity_id) {
-      $join->on('rel_by.called_id', '=', 'id')
-          ->where('rel_by.caller_id', '=', $entity_id)
-          ->where('rel_by.kind', '=', 'medium');
+    $query->join('relations as rel_media', function ($join) use ($entity_id) {
+      $join->on('rel_media.called_id', '=', 'id')
+          ->where('rel_media.caller_id', '=', $entity_id)
+          ->where('rel_media.kind', '=', 'medium');
     })
-        ->addSelect('id', 'model', 'rel_by.kind', 'rel_by.position', 'rel_by.depth', 'rel_by.tags')
+        ->addSelect('id', 'model', 'rel_media.kind', 'rel_media.position', 'rel_media.depth', 'rel_media.tags')
         ->orderBy('position')
         ->withContents('title')
         ->with('medium');
