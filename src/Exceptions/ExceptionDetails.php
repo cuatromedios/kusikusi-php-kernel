@@ -8,7 +8,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class ExceptionDetails
 {
-  public static function filter(\Exception $e)
+  public static function filter(\Throwable $e)
   {
     $result = ["info" => []];
     switch (get_class($e)) {

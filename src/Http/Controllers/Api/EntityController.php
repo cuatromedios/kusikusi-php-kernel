@@ -4,13 +4,15 @@ namespace Cuatromedios\Kusikusi\Http\Controllers\Api;
 
 use Cuatromedios\Kusikusi\Exceptions\ExceptionDetails;
 use Cuatromedios\Kusikusi\Http\Controllers\Controller;
-use Cuatromedios\Kusikusi\Models\EntityBase;
+use App\Models\Entity;
 use Cuatromedios\Kusikusi\Providers\AuthServiceProvider;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Config;
+use Illuminate\Support\Facades\Auth;
 use Cuatromedios\Kusikusi\Models\Http\ApiResponse;
 use Cuatromedios\Kusikusi\Models\Activity;
+use Exception;
 
 class EntityController extends Controller
 {
@@ -34,19 +36,27 @@ class EntityController extends Controller
     {
         try {
             $lang = $request->input('lang', Config::get('general.langs')[0]);
-            $fields = $request->input('fields', []);
-            $entity = EntityBase::getOne($id, $fields, $lang);
-            if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id])) {
-                Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getOne', "{}");
+            $select = deserialize_select($request->input('select', $request->input('fields', 'entities.*,contents.*'))); //select or fields for backwards compatibility
+            if ($select['entities'][0] != '*') {
+              $entity = Entity::select($select['entities']);
+            } else {
+              $entity = Entity::select('entities.*');
+            }
+            if ($select['contents'][0] != '*') {
+              $entity = $entity->withContents($select['contents']);
+            } else {
+              $entity = $entity->withContents();
+            }
+            //TODO: Select attached data fields
+            $entity = $entity->find($id)->compact();
+            if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getOne', "{}"])) {
                 return (new ApiResponse($entity, TRUE))->response();
             } else {
-                Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'getOne', json_encode(["error" => ApiResponse::TEXT_FORBIDDEN]));
                 return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
             }
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             $exceptionDetails = ExceptionDetails::filter($e);
-            Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'getOne', json_encode(["error" => $exceptionDetails['info']]));
-            return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
+            return (new ApiResponse(NULL, FALSE, $exceptionDetails, $exceptionDetails['code']))->response();
         }
     }
 

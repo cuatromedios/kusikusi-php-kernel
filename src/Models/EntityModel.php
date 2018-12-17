@@ -676,6 +676,42 @@ class EntityModel extends KusikusiModel
     }
   }
 
+
+  /**
+   * Get true if an entity is descendant of another.
+   *
+   * @param string $id1 The id of the reference entity
+   * @param string $id2 The id of the entity to know is an ancestor of
+   * @return Boolean
+   */
+  public static function isDescendant($id1, $id2)
+  {
+    $ancestors = Entity::select('id')->ancestorOf($id1)->get();
+    foreach ($ancestors as $ancestor) {
+      if ($ancestor->id === $id2) {
+        return true;
+      }
+    }
+    return false;
+  }
+  /**
+   * Get true if an entity is descendant of another or itself.
+   *
+   * @param string $id1 The id of the reference entity
+   * @param string $id2 The id of the entity to know is an ancestor of
+   * @return Boolean
+   */
+  public static function isSelfOrDescendant($id1, $id2)
+  {
+    if ($id1 === $id2) {
+      return true;
+    } else {
+      return Entity::isDescendant($id1, $id2);
+    }
+  }
+
+
+
   /**
    * Events.
    *
