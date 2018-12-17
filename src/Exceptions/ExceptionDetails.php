@@ -36,6 +36,6 @@ class ExceptionDetails
           "trace" => $e->getTraceAsString()
       ];
     }
-    return $result;
+    return $result['info'];
   }
 }
