@@ -37,7 +37,7 @@ class EntityController extends Controller
     try {
       $lang = $request->input('lang', Config::get('general.langs')[0]);
       $entity = Entity::select();
-      $entity = deserialize_select($entity, $request); //select or fields for backwards compatibility
+      $entity = deserialize_select($entity, $request);
       //TODO: Select attached data fields
       $entity = $entity->find($id)->compact();
       if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getOne', "{}"])) {
