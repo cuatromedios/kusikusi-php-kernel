@@ -36,10 +36,10 @@ class EntityController extends Controller
   {
     try {
       $lang = $request->input('lang', Config::get('general.langs')[0]);
-      $entity = Entity::select();
-      $entity = deserialize_select($entity, $request);
+      $query = Entity::select();
+      $query = deserialize_select($query, $request);
       //TODO: Select attached data fields
-      $entity = $entity->find($id)->compact();
+      $entity = $query->find($id)->compact();
       if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getOne', "{}"])) {
         return (new ApiResponse($entity, TRUE))->response();
       } else {
