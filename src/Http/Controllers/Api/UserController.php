@@ -65,11 +65,6 @@ class UserController extends Controller
       Activity::add('', '', 'login', FALSE, '', json_encode(["error" => $status, "username" => $request->input('username')]));
       return (new ApiResponse(NULL, FALSE, ExceptionDetails::filter($e), $status))->response();
     }
-    // TODO: Validate input
-    /* $this->validate($request, [
-        'email' => 'required',
-        'password' => 'required'
-    ]); */
   }
 
   /**
