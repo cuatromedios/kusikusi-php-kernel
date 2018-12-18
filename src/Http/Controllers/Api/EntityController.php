@@ -66,7 +66,10 @@ class EntityController extends Controller
       $query = Entity::select();
       $query = deserialize_select($query, $request);
       //TODO: Select attached data fields
-      $entity = $query->find($id)->compact();
+      $entity = $query->find($id);
+      if ($entity != null) {
+        $entity = $query->find($id)->compact();
+      }
       if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getOne', "{}"])) {
         return (new ApiResponse($entity, TRUE))->response();
       } else {
@@ -198,6 +201,7 @@ class EntityController extends Controller
         $query = deserialize_select($query, $request);
         //TODO: Select attached data fields
         $entity = $query->parentOf($id)->get()->compact();
+        //TODO: Also check if the user can read the parent.
         if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getOne', "{}"])) {
           return (new ApiResponse($entity, TRUE))->response();
         } else {
