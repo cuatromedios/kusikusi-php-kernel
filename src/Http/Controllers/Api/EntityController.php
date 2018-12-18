@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Auth;
 use Cuatromedios\Kusikusi\Models\Http\ApiResponse;
 use Cuatromedios\Kusikusi\Models\Activity;
+use Illuminate\Support\Facades\Validator;
 use Exception;
 
 class EntityController extends Controller
@@ -24,6 +25,32 @@ class EntityController extends Controller
   public function __construct()
   {
     $this->middleware('auth');
+  }
+
+  /**
+   * Display all entities.
+   *
+   * @param $id
+   * @return \Illuminate\Http\Response
+   */
+  public function get(Request $request)
+  {
+    try {
+        $lang = $request->input('lang', Config::get('general.langs')[0]);
+        $permissions = Auth::user()->permissions;
+        // TODO: Get every entity descendant of the user 'home'
+        $query = Entity::select();
+        $query = deserialize_select($query, $request);
+        $entity = $query->get()->compact();
+        if (Gate::allows(AuthServiceProvider::READ_ALL)) {
+            return (new ApiResponse($entity, TRUE))->response();
+        } else {
+            return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+        }
+    } catch (\Throwable $e) {
+        $exceptionDetails = ExceptionDetails::filter($e);
+        return (new ApiResponse(NULL, FALSE, $exceptionDetails, $exceptionDetails['code']))->response();
+    } 
   }
 
   /**
@@ -60,23 +87,23 @@ class EntityController extends Controller
   public function post(Request $request)
   {
     try {
-      // TODO: Filter the json to delete al not used data
-      $body = $request->json()->all();
-      if (!isset($body['parent'])) {
-        return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_BADREQUEST . ': No parent parameter', ApiResponse::STATUS_BADREQUEST))->response();
-      }
-      if (Gate::allows(AuthServiceProvider::WRITE_ENTITY, [$request->parent]) === true) {
-        $entityPosted = EntityBase::post($request->json()->all());
-        Activity::add(\Auth::user()['id'], $entityPosted['id'], AuthServiceProvider::WRITE_ENTITY, TRUE, 'post', json_encode(["body" => $body]));
-        return (new ApiResponse($entityPosted, TRUE))->response();
-      } else {
-        Activity::add(\Auth::user()['id'], '', AuthServiceProvider::WRITE_ENTITY, FALSE, 'post', json_encode(["body" => $body, "error" => ApiResponse::TEXT_FORBIDDEN]));
-        return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
-      }
-    } catch (\Exception $e) {
-      $exceptionDetails = ExceptionDetails::filter($e);
-      Activity::add(\Auth::user()['id'], '', AuthServiceProvider::WRITE_ENTITY, FALSE, 'post', json_encode(["body" => $body, "error" => $exceptionDetails['info']]));
-      return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
+        $this->validate($request, [
+            "parent_id" => "required|string",
+            "model" => "required|string"
+            ], Config::get('validator.messages'));
+        $body = $request->json()->all();
+        if (Gate::allows(AuthServiceProvider::WRITE_ENTITY, [$request->parent_id]) === true) {
+            $entityPosted = new Entity($body);
+            $entityPosted->save();
+            Activity::add(\Auth::user()['id'], $entityPosted['id'], AuthServiceProvider::WRITE_ENTITY, TRUE, 'post', json_encode(["body" => $body]));
+            return (new ApiResponse($entityPosted, TRUE))->response();
+        } else {
+            Activity::add(\Auth::user()['id'], '', AuthServiceProvider::WRITE_ENTITY, FALSE, 'post', json_encode(["body" => $body, "error" => ApiResponse::TEXT_FORBIDDEN]));
+            return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+        }
+    } catch (\Throwable $e) {
+        $exceptionDetails = ExceptionDetails::filter($e);
+        return (new ApiResponse(NULL, FALSE, $exceptionDetails, $exceptionDetails['code']))->response();
     }
   }
 
@@ -92,17 +119,16 @@ class EntityController extends Controller
       // TODO: Filter the json to delete all not used data
       $body = $request->json()->all();
       if (Gate::allows(AuthServiceProvider::WRITE_ENTITY, [$id]) === true) {
-        $entityPatched = EntityBase::patch($id, $body);
+        $entityPatched = Entity::find($id)->update($body);
         Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, TRUE, 'patch', json_encode(["body" => $body]));
         return (new ApiResponse($entityPatched, TRUE))->response();
       } else {
         Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, FALSE, 'patch', json_encode(["body" => $body, "error" => ApiResponse::TEXT_FORBIDDEN]));
         return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
       }
-    } catch (\Exception $e) {
-      $exceptionDetails = ExceptionDetails::filter($e);
-      Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, FALSE, 'patch', json_encode(["body" => $body, "error" => $exceptionDetails['info']]));
-      return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
+    } catch (\Throwable $e) {
+        $exceptionDetails = ExceptionDetails::filter($e);
+        return (new ApiResponse(NULL, FALSE, $exceptionDetails, $exceptionDetails['code']))->response();
     }
   }
 
@@ -167,48 +193,20 @@ class EntityController extends Controller
   public function getParent($id, Request $request)
   {
     try {
-      $lang = $request->input('lang', Config::get('general.langs')[0]);
-      $fields = $request->input('fields', []);
-      $entity = EntityBase::getParent($id, $fields, $lang);
-      if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id])) {
-        Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getParent', "{}");
-        return (new ApiResponse($entity, TRUE))->response();
-      } else {
-        Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'getParent', json_encode(["error" => ApiResponse::TEXT_FORBIDDEN]));
-        return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+        $lang = $request->input('lang', Config::get('general.langs')[0]);
+        $query = Entity::select();
+        $query = deserialize_select($query, $request);
+        //TODO: Select attached data fields
+        $entity = $query->parentOf($id)->get()->compact();
+        if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getOne', "{}"])) {
+          return (new ApiResponse($entity, TRUE))->response();
+        } else {
+          return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+        }
+      } catch (\Throwable $e) {
+        $exceptionDetails = ExceptionDetails::filter($e);
+        return (new ApiResponse(NULL, FALSE, $exceptionDetails, $exceptionDetails['code']))->response();
       }
-    } catch (\Exception $e) {
-      $exceptionDetails = ExceptionDetails::filter($e);
-      Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'getParent', json_encode(["error" => $exceptionDetails['info']]));
-      return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
-    }
-  }
-
-  /**
-   * Display all entities.
-   *
-   * @param $id
-   * @return \Illuminate\Http\Response
-   */
-  public function get(Request $request)
-  {
-    try {
-      $fields = $request->input('fields', []);
-      $lang = $request->input('lang', Config::get('general.langs')[0]);
-      $order = $request->input('order', NULL);
-      if (Gate::allows(AuthServiceProvider::READ_ALL)) {
-        $collection = EntityBase::get(NULL, $fields, $lang, $order);
-        Activity::add(\Auth::user()['id'], '', AuthServiceProvider::READ_ENTITY, TRUE, 'get', "{}");
-        return (new ApiResponse($collection, TRUE))->response();
-      } else {
-        Activity::add(\Auth::user()['id'], '', AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => ApiResponse::TEXT_FORBIDDEN]));
-        return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
-      }
-    } catch (\Exception $e) {
-      $exceptionDetails = ExceptionDetails::filter($e);
-      Activity::add(\Auth::user()['id'], '', AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => $exceptionDetails['info']]));
-      return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
-    }
   }
 
   /**
@@ -220,23 +218,20 @@ class EntityController extends Controller
   public function getChildren($id, Request $request)
   {
     try {
-      $fields = $request->input('fields', []);
-      $lang = $request->input('lang', Config::get('general.langs')[0]);
-      $order = $request->input('order', NULL);
-      $filter = $request->input('filter', NULL);
-      if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'children'])) {
-        $collection = EntityBase::getChildren($id, $fields, $lang, $order, $filter);
-        Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getChildren', "{}");
-        return (new ApiResponse($collection, TRUE))->response();
-      } else {
-        Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'getChildren', json_encode(["error" => ApiResponse::TEXT_FORBIDDEN]));
-        return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+        $lang = $request->input('lang', Config::get('general.langs')[0]);
+        $query = Entity::select();
+        $query = deserialize_select($query, $request);
+        //TODO: Select attached data fields
+        $entity = $query->childOf($id)->get()->compact();
+        if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getOne', "{}"])) {
+          return (new ApiResponse($entity, TRUE))->response();
+        } else {
+          return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+        }
+      } catch (\Throwable $e) {
+        $exceptionDetails = ExceptionDetails::filter($e);
+        return (new ApiResponse(NULL, FALSE, $exceptionDetails, $exceptionDetails['code']))->response();
       }
-    } catch (\Exception $e) {
-      $exceptionDetails = ExceptionDetails::filter($e);
-      Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'getChildren', json_encode(["error" => $exceptionDetails['info']]));
-      return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
-    }
   }
 
   /**
@@ -248,21 +243,19 @@ class EntityController extends Controller
   public function getAncestors($id, Request $request)
   {
     try {
-      $fields = $request->input('fields', []);
-      $lang = $request->input('lang', Config::get('general.langs')[0]);
-      $order = $request->input('order', NULL);
-      if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'ancestors'])) {
-        $collection = EntityBase::getAncestors($id, $fields, $lang, $order);
-        Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getAncestors', "{}");
-        return (new ApiResponse($collection, TRUE))->response();
-      } else {
-        Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'getAncestors', json_encode(["error" => ApiResponse::TEXT_FORBIDDEN]));
-        return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
-      }
-    } catch (\Exception $e) {
-      $exceptionDetails = ExceptionDetails::filter($e);
-      Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'getAncestors', json_encode(["error" => $exceptionDetails['info']]));
-      return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
+        $lang = $request->input('lang', Config::get('general.langs')[0]);
+        $query = Entity::select();
+        $query = deserialize_select($query, $request);
+        //TODO: Select attached data fields
+        $entity = $query->ancestorOf($id)->get()->compact();
+        if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getOne', "{}"])) {
+          return (new ApiResponse($entity, TRUE))->response();
+        } else {
+          return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+        }
+    } catch (\Throwable $e) {
+        $exceptionDetails = ExceptionDetails::filter($e);
+        return (new ApiResponse(NULL, FALSE, $exceptionDetails, $exceptionDetails['code']))->response();
     }
   }
 
@@ -275,22 +268,20 @@ class EntityController extends Controller
   public function getDescendants($id, Request $request)
   {
     try {
-      $fields = $request->input('fields', []);
-      $lang = $request->input('lang', Config::get('general.langs')[0]);
-      $order = $request->input('order', NULL);
-      if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'descendants'])) {
-        $collection = EntityBase::getDescendants($id, $fields, $lang, $order);
-        Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getDescendants', "{}");
-        return (new ApiResponse($collection, TRUE))->response();
-      } else {
-        Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'getDescendants', json_encode(["error" => ApiResponse::TEXT_FORBIDDEN]));
-        return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
-      }
-    } catch (\Exception $e) {
-      $exceptionDetails = ExceptionDetails::filter($e);
-      Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'getDescendants', json_encode(["error" => $exceptionDetails['info']]));
-      return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
-    }
+        $lang = $request->input('lang', Config::get('general.langs')[0]);
+        $query = Entity::select();
+        $query = deserialize_select($query, $request);
+        //TODO: Select attached data fields
+        $entity = $query->descendantOf($id)->get()->compact();
+        if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getOne', "{}"])) {
+          return (new ApiResponse($entity, TRUE))->response();
+        } else {
+          return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+        }
+    } catch (\Throwable $e) {
+        $exceptionDetails = ExceptionDetails::filter($e);
+        return (new ApiResponse(NULL, FALSE, $exceptionDetails, $exceptionDetails['code']))->response();
+    } 
   }
 
   /**

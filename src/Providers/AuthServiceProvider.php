@@ -49,7 +49,7 @@ class AuthServiceProvider extends ServiceProvider
         });
         Gate::define(self::READ_ALL, function ($user, $subaction = NULL, $metadata = NULL) {
             foreach ($user->permissions as $permission) {
-                if ($permission->read === Permission::ANY && $permission->entity_id === 'root') {
+                if ($permission->read === Permission::ANY) {
                     return true;
                 }
             }

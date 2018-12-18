@@ -164,6 +164,23 @@ class EntityModel extends KusikusiModel
   public function setLang($lang) {
     $this->_lang = $lang;
   }
+
+  /**
+   * Adds data rows to a separate table related to the entity.
+   *
+   * @param  array $data An arrray of one or more contents in field => value format for example ["format" => "png", "size", "1080"]
+   * @param  string $model required to identify in which table the data wil be saved
+   */
+  public function addData($contents, $model)
+  {
+    $modelClass = Entity::getClassFromModelId($model);
+      if (count($modelClass::$dataFields)) {
+        $modelClass::updateOrCreate(
+          [
+            "id" => $this->id
+          ], $contents);
+      }
+  }
   
   /**************************
    * 
@@ -568,6 +585,7 @@ class EntityModel extends KusikusiModel
     if (isset($data['id'])) {
       $id = $data['id'];
       unset($data['id']);
+      // TODO: Maybe filter through illuminate ValidationException
       if (!isset($data['kind'])) {
         $data['kind'] = 'relation';
       }
@@ -723,9 +741,19 @@ class EntityModel extends KusikusiModel
 
     parent::boot();
 
-    self::creating(function ($model) {
-      if (!isset($model['model'])) {
+    self::creating(function ($entity) {
+      if (!isset($entity['model'])) {
         throw new \Exception('A model id is requiered to create a new entity', ApiResponse::STATUS_BADREQUEST);
+      }
+      if (isset($entity['contents'])) {
+        $entity->addContents($entity['contents']);
+        unset($entity['contents']);
+      }
+
+      // Set data in the correspondent table
+      if (isset($entity['data'])) {
+        $entity->addData($entity['data'], $entity['model']);
+        unset($entity['data']);
       }
     });
 
@@ -745,6 +773,19 @@ class EntityModel extends KusikusiModel
     self::saved(function ($entity) {
       self::updateEntityVersion($entity->id);
     });
+
+    self::updating(function ($entity) {
+      if (isset($entity['contents'])) {
+        $entity->addContents($entity['contents']);
+        unset($entity['contents']);
+      }
+
+      // Set data in the correspondent table
+      if (isset($entity['data'])) {
+        $entity->addData($entity['data'], $entity['model']);
+        unset($entity['data']);
+      }
+    });
   }
 
 
@@ -754,7 +795,7 @@ class EntityModel extends KusikusiModel
   private static function getClassFromModelId($modelId)
   {
     if (isset($modelId) && $modelId != '') {
-      return ("App\\Models\\" . (studly_case($modelId)));
+      return ("\\App\\Models\\" . (studly_case($modelId)));
     } else {
       return NULL;
     }
