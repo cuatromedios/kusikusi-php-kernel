@@ -199,10 +199,14 @@ class EntityController extends Controller
         $query = deserialize_select($query, $request);
         //TODO: Select attached data fields
         $entity = $query->parentOf($id)->get()->compact();
-        if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$entity[0]['id'], 'getParent', "{}"])) {
-          return (new ApiResponse($entity[0], TRUE))->response();
+        if(count($entity) > 0) {
+          if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$entity[0]['id'], 'getParent', "{}"])) {
+            return (new ApiResponse($entity, TRUE))->response();
+          } else {
+            return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+          }
         } else {
-          return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+          return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_NOTFOUND, ApiResponse::STATUS_NOTFOUND))->response();
         }
       } catch (\Throwable $e) {
         $exceptionDetails = ExceptionDetails::filter($e);
@@ -304,7 +308,10 @@ class EntityController extends Controller
         } else {
           $relation->whereKind($kind);
         }
-      })->find($id)->compact();
+      })->find($id);
+      if ($entity != NULL) {
+        $entity->find($id)->compact();
+      }
       if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getRelations', "{}"])) {
         return (new ApiResponse($entity['relations'], TRUE))->response();
       } else {
@@ -335,7 +342,10 @@ class EntityController extends Controller
         } else {
           $relation->whereKind($kind);
         }
-      })->find($id)->compact();
+      })->find($id);
+      if ($entity != NULL) {
+        $entity->find($id)->compact();
+      }
       if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getRelations', "{}"])) {
         return (new ApiResponse($entity['inverse_relations'], TRUE))->response();
       } else {

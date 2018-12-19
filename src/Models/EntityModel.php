@@ -93,7 +93,7 @@ class EntityModel extends KusikusiModel
       Entity::destroy($this->id);
     } else {
       $modelClass = Entity::getClassFromModelId($this->model);
-      if (count($modelClass::$dataFields) > 0) {
+      if (file_exists($modelClass) && count($modelClass::$dataFields) > 0) {
         $modelClass::destroy($this->id);
       } 
       self::updateEntityVersion($this->id);
