@@ -76,7 +76,7 @@ class UserController extends Controller
   public function getPermissions($id)
   {
     try {
-      if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id]) === true) {
+      if (\Auth::user()['profile'] == 'admin') {
         $permissionResult = Permission::getPermissions($id);
         Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getPermissions', "{}");
         return (new ApiResponse($permissionResult, TRUE))->response();
@@ -100,44 +100,49 @@ class UserController extends Controller
   public function postPermissions(Request $request)
   {
     try {
+      $this->validate($request, [
+          "user_id" => "required|string",
+          "entity_id" => "required|string",
+          "read" => "required|string",
+          "write" => "required|string"
+      ], Config::get('validator.messages'));
       $body = $request->json()->all();
-      if (Gate::allows(AuthServiceProvider::WRITE_ENTITY, [$request->user_id]) === true) {
-        $permissionResult = Permission::postPermissions($body);
-        Activity::add(\Auth::user()['id'], $permissionResult['id'], AuthServiceProvider::WRITE_ENTITY, TRUE, 'postPermissions', json_encode(["body" => $body]));
+      if (\Auth::user()['profile'] == 'admin') {
+        $permissionResult = Permission::addPermission($body['user_id'], $body['entity_id'], $body['read'], $body['write']);
+        // Activity::add(\Auth::user()['id'], $permissionResult['id'], AuthServiceProvider::WRITE_ENTITY, TRUE, 'postPermissions', json_encode(["body" => $body]));
         return (new ApiResponse($permissionResult, TRUE))->response();
       } else {
         Activity::add(\Auth::user()['id'], '', AuthServiceProvider::WRITE_ENTITY, FALSE, 'postPermissions', json_encode(["body" => $body, "error" => ApiResponse::TEXT_FORBIDDEN]));
         return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
       }
-    } catch (\Exception $e) {
+    } catch (\Throwable $e) {
       $exceptionDetails = ExceptionDetails::filter($e);
-      Activity::add(\Auth::user()['id'], '', AuthServiceProvider::WRITE_ENTITY, FALSE, 'postPermissions', json_encode(["body" => $body, "error" => $exceptionDetails['info']]));
-      return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
-    }
+      return (new ApiResponse(NULL, FALSE, $exceptionDetails, $exceptionDetails['code']))->response();
+  }
   }
 
   /**
-   * Updates the permissions in the given entity.
+   * Removes the permissions from the given user.
    *
    * @param $id , Request $request
+   * @param $entity_id
    * @return \Illuminate\Http\Response
    */
-  public function patchPermissions($id, Request $request)
+  public function removePermissions($id, $entity, Request $request)
   {
     try {
       $body = $request->json()->all();
-      if (Gate::allows(AuthServiceProvider::WRITE_ENTITY, [$id]) === true) {
-        $permissionResult = Permission::patchPermissions($id, $body);
-        Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, TRUE, 'patchPermissions', json_encode(["body" => $body]));
+      if (\Auth::user()['profile'] == 'admin') {
+        $permissionResult = Permission::deletePermission($id, $entity);
+        // Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, TRUE, 'patchPermissions', json_encode(["body" => $body]));
         return (new ApiResponse($permissionResult, TRUE))->response();
       } else {
-        Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, FALSE, 'patchPermissions', json_encode(["body" => $body, "error" => ApiResponse::TEXT_FORBIDDEN]));
+        // Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, FALSE, 'patchPermissions', json_encode(["body" => $body, "error" => ApiResponse::TEXT_FORBIDDEN]));
         return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
       }
-    } catch (\Exception $e) {
+    } catch (\Throwable $e) {
       $exceptionDetails = ExceptionDetails::filter($e);
-      Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, FALSE, 'patchPermissions', json_encode(["body" => $body, "error" => $exceptionDetails['info']]));
-      return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
+      return (new ApiResponse(NULL, FALSE, $exceptionDetails, $exceptionDetails['code']))->response();
     }
   }
 }

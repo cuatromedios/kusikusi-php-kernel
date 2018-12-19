@@ -38,7 +38,7 @@ class EntityController extends Controller
     try {
         $lang = $request->input('lang', Config::get('general.langs')[0]);
         $permissions = Auth::user()->permissions;
-        // TODO: Get every entity descendant of the user 'home'
+        // TODO: Get every entity descendant of the user's 'home'
         $query = Entity::select();
         $query = deserialize_select($query, $request);
         $entity = $query->get()->compact();
@@ -147,17 +147,16 @@ class EntityController extends Controller
   {
     try {
       if (Gate::allows(AuthServiceProvider::WRITE_ENTITY, [$id]) === true) {
-        $entitySoftDeleted = EntityBase::softDelete($id);
+        $entitySoftDeleted = Entity::find($id)->deleteEntity();
         Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, TRUE, 'softDelete', '{}');
-        return (new ApiResponse($entitySoftDeleted, TRUE))->response();
+        return (new ApiResponse($id, TRUE))->response();
       } else {
         Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, FALSE, 'softDelete', json_encode(["error" => ApiResponse::TEXT_FORBIDDEN]));
         return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
       }
-    } catch (\Exception $e) {
+    } catch (\Throwable $e) {
       $exceptionDetails = ExceptionDetails::filter($e);
-      Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, FALSE, 'softDelete', json_encode(["error" => $exceptionDetails['info']]));
-      return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
+      return (new ApiResponse(NULL, FALSE, $exceptionDetails, $exceptionDetails['code']))->response();
     }
   }
 
@@ -172,17 +171,16 @@ class EntityController extends Controller
   {
     try {
       if (Gate::allows(AuthServiceProvider::WRITE_ENTITY, [$id]) === true) {
-        $entityHardDeleted = EntityBase::hardDelete($id);
+        $entitySoftDeleted = Entity::withTrashed()->find($id)->deleteEntity(true);
         Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, TRUE, 'hardDelete', '{}');
-        return (new ApiResponse($entityHardDeleted, TRUE))->response();
+        return (new ApiResponse($id, TRUE))->response();
       } else {
         Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, FALSE, 'hardDelete', json_encode(["error" => ApiResponse::TEXT_FORBIDDEN]));
         return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
       }
-    } catch (\Exception $e) {
+    } catch (\Throwable $e) {
       $exceptionDetails = ExceptionDetails::filter($e);
-      Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, FALSE, 'hardDelete', json_encode(["error" => $exceptionDetails['info']]));
-      return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
+      return (new ApiResponse(NULL, FALSE, $exceptionDetails, $exceptionDetails['code']))->response();
     }
   }
 
@@ -201,9 +199,8 @@ class EntityController extends Controller
         $query = deserialize_select($query, $request);
         //TODO: Select attached data fields
         $entity = $query->parentOf($id)->get()->compact();
-        //TODO: Also check if the user can read the parent.
-        if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getOne', "{}"])) {
-          return (new ApiResponse($entity, TRUE))->response();
+        if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$entity[0]['id'], 'getParent', "{}"])) {
+          return (new ApiResponse($entity[0], TRUE))->response();
         } else {
           return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
         }
@@ -227,7 +224,7 @@ class EntityController extends Controller
         $query = deserialize_select($query, $request);
         //TODO: Select attached data fields
         $entity = $query->childOf($id)->get()->compact();
-        if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getOne', "{}"])) {
+        if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getChildren', "{}"])) {
           return (new ApiResponse($entity, TRUE))->response();
         } else {
           return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
@@ -252,7 +249,7 @@ class EntityController extends Controller
         $query = deserialize_select($query, $request);
         //TODO: Select attached data fields
         $entity = $query->ancestorOf($id)->get()->compact();
-        if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getOne', "{}"])) {
+        if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getAncestors', "{}"])) {
           return (new ApiResponse($entity, TRUE))->response();
         } else {
           return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
@@ -277,7 +274,7 @@ class EntityController extends Controller
         $query = deserialize_select($query, $request);
         //TODO: Select attached data fields
         $entity = $query->descendantOf($id)->get()->compact();
-        if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getOne', "{}"])) {
+        if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getDescendants', "{}"])) {
           return (new ApiResponse($entity, TRUE))->response();
         } else {
           return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
@@ -297,26 +294,30 @@ class EntityController extends Controller
   public function getRelations($id, $kind = NULL, Request $request)
   {
     try {
-      $fields = $request->input('fields', []);
       $lang = $request->input('lang', Config::get('general.langs')[0]);
-      $order = $request->input('order', NULL);
-      if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'relations'])) {
-        $collection = EntityBase::getEntityRelations($id, $kind, $fields, $lang, $order);
-        Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getRelations', "{}");
-        return (new ApiResponse($collection, TRUE))->response();
+      $query = Entity::select();
+      $query = deserialize_select($query, $request);
+      //TODO: Select attached data fields
+      $entity = $query->withRelations(function($relation) use ($kind) {
+        if ($kind == NULL) {
+          $relation->where('kind', '<>', 'ancestor');
+        } else {
+          $relation->whereKind($kind);
+        }
+      })->find($id)->compact();
+      if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getRelations', "{}"])) {
+        return (new ApiResponse($entity['relations'], TRUE))->response();
       } else {
-        Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'getRelations', json_encode(["error" => ApiResponse::TEXT_FORBIDDEN]));
         return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
       }
-    } catch (\Exception $e) {
-      $exceptionDetails = ExceptionDetails::filter($e);
-      Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'getRelations', json_encode(["error" => $exceptionDetails['info']]));
-      return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
-    }
+    } catch (\Throwable $e) {
+        $exceptionDetails = ExceptionDetails::filter($e);
+        return (new ApiResponse(NULL, FALSE, $exceptionDetails, $exceptionDetails['code']))->response();
+    } 
   }
 
   /**
-   * Display entity's relations.
+   * Display entity's inverse relations.
    *
    * @param $id
    * @return \Illuminate\Http\Response
@@ -324,22 +325,26 @@ class EntityController extends Controller
   public function getInverseRelations($id, $kind = NULL, Request $request)
   {
     try {
-      $fields = $request->input('fields', []);
       $lang = $request->input('lang', Config::get('general.langs')[0]);
-      $order = $request->input('order', NULL);
-      if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'inverse-relations'])) {
-        $collection = EntityBase::getInverseEntityRelations($id, $kind, $fields, $lang, $order);
-        Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getInverseRelations', "{}");
-        return (new ApiResponse($collection, TRUE))->response();
+      $query = Entity::select();
+      $query = deserialize_select($query, $request);
+      //TODO: Select attached data fields
+      $entity = $query->withInverseRelations(function($relation) use ($kind) {
+        if ($kind == NULL) {
+          $relation->where('kind', '<>', 'ancestor');
+        } else {
+          $relation->whereKind($kind);
+        }
+      })->find($id)->compact();
+      if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getRelations', "{}"])) {
+        return (new ApiResponse($entity['inverse_relations'], TRUE))->response();
       } else {
-        Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'getInverseRelations', json_encode(["error" => ApiResponse::TEXT_FORBIDDEN]));
         return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
       }
-    } catch (\Exception $e) {
-      $exceptionDetails = ExceptionDetails::filter($e);
-      Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'getInverseRelations', json_encode(["error" => $exceptionDetails['info']]));
-      return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
-    }
+    } catch (\Throwable $e) {
+        $exceptionDetails = ExceptionDetails::filter($e);
+        return (new ApiResponse(NULL, FALSE, $exceptionDetails, $exceptionDetails['code']))->response();
+    } 
   }
 
   /**
@@ -352,44 +357,46 @@ class EntityController extends Controller
   {
     try {
       // TODO: Filter the json to delete al not used data
+      $this->validate($request, [
+          "id" => "required|string",
+          "kind" => "required|string"
+      ], Config::get('validator.messages'));
       $body = $request->json()->all();
       if (Gate::allows(AuthServiceProvider::WRITE_ENTITY, [$id, 'relation']) === true) {
-        $entityPosted = EntityBase::postRelation($id, $body);
-        Activity::add(\Auth::user()['id'], $entityPosted['id'], AuthServiceProvider::WRITE_ENTITY, TRUE, 'postRelation', json_encode(["body" => $body]));
-        return (new ApiResponse($entityPosted, TRUE))->response();
+        $relationPosted = Entity::find($id)->addRelation($body);
+        Activity::add(\Auth::user()['id'], $relationPosted['id'], AuthServiceProvider::WRITE_ENTITY, TRUE, 'postRelation', json_encode(["body" => $body]));
+        return (new ApiResponse($relationPosted, TRUE))->response();
       } else {
         Activity::add(\Auth::user()['id'], '', AuthServiceProvider::WRITE_ENTITY, FALSE, 'postRelation', json_encode(["body" => $body, "error" => ApiResponse::TEXT_FORBIDDEN]));
         return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
       }
-    } catch (\Exception $e) {
+    } catch (\Throwable $e) {
       $exceptionDetails = ExceptionDetails::filter($e);
-      Activity::add(\Auth::user()['id'], '', AuthServiceProvider::WRITE_ENTITY, FALSE, 'postRelation', json_encode(["body" => $body, "error" => $exceptionDetails['info']]));
-      return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
+      return (new ApiResponse(NULL, FALSE, $exceptionDetails, $exceptionDetails['code']))->response();
     }
   }
 
   /**
-   * Create the specified entity.
+   * Deletes the specified relation.
    *
    * @param $id
    * @return \Illuminate\Http\Response
    */
-  public function deleteRelation($id, $called, $kind)
+  public function deleteRelation($id, $kind, $called)
   {
     try {
       // TODO: Filter the json to delete al not used data
       if (Gate::allows(AuthServiceProvider::WRITE_ENTITY, [$id, 'relation']) === true) {
-        $entityPostedId = EntityBase::deleteRelation($id, $called, $kind);
+        $relationDeleted = Entity::find($id)->deleteRelation($kind, $called);
         Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, TRUE, 'deleteRelation', json_encode(["body" => ["called" => $called, "kind" => $kind]]));
-        return (new ApiResponse($entityPostedId, TRUE))->response();
+        return (new ApiResponse($relationDeleted, TRUE))->response();
       } else {
         Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, FALSE, 'deleteRelation', json_encode(["body" => ["called" => $called, "kind" => $kind], "error" => ApiResponse::TEXT_FORBIDDEN]));
         return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
       }
-    } catch (\Exception $e) {
+    } catch (\Throwable $e) {
       $exceptionDetails = ExceptionDetails::filter($e);
-      Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, FALSE, 'deleteRelation', json_encode(["body" => ["called" => $called, "kind" => $kind], "error" => $exceptionDetails['info']]));
-      return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
+      return (new ApiResponse(NULL, FALSE, $exceptionDetails, $exceptionDetails['code']))->response();
     }
   }
 }

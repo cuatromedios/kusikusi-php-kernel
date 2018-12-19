@@ -92,9 +92,12 @@ class Permission extends Model
         "write" => "required|in:".Permission::NONE.",".Permission::OWN.",".Permission::ANY
     ], Config::get('validator.messages'))->validate();
     Permission::deletePermission($user_id, $entity_id);
-    $result = Permission::create([
+    $result = Permission::updateOrCreate(
+      [
         "user_id" => $user_id,
         "entity_id" => $entity_id,
+      ],
+      [
         "read" => $read,
         "write" => $write
     ]);
@@ -102,7 +105,7 @@ class Permission extends Model
   }
 
   /**
-   * Patch permissions.
+   * Delete permissions.
    *
    * @param $user_id , $information
    * @return \Illuminate\Http\JsonResponse|array

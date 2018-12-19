@@ -3,6 +3,7 @@
 namespace Cuatromedios\Kusikusi\Models;
 
 use App\Models\Entity;
+use Cuatromedios\Kusikusi\Models\Relation;
 use Cuatromedios\Kusikusi\Models\Http\ApiResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Config;
@@ -80,6 +81,26 @@ class EntityModel extends KusikusiModel
    */
   public $timestamps = true;
 
+  /**
+   * Deletes an entity and its relations
+   * 
+   * @param boolean $hard Allows to completely delete an entity and its relation from the database
+   */
+  public function deleteEntity($hard = false)
+  {
+    if (!$hard) {
+      self::updateEntityVersion($this->id);
+      Entity::destroy($this->id);
+    } else {
+      $modelClass = Entity::getClassFromModelId($this->model);
+      if (count($modelClass::$dataFields) > 0) {
+        $modelClass::destroy($this->id);
+      } 
+      self::updateEntityVersion($this->id);
+      $this->relations()->detach();
+      $this->forceDelete();
+    }
+  }
 
   /**
    * Adds content rows to an Entity.
@@ -102,6 +123,7 @@ class EntityModel extends KusikusiModel
           ]);
     }
   }
+
   /**
    * Deletes content rows to an Entity.
    *
@@ -174,7 +196,7 @@ class EntityModel extends KusikusiModel
   public function addData($contents, $model)
   {
     $modelClass = Entity::getClassFromModelId($model);
-      if (count($modelClass::$dataFields)) {
+      if (count($modelClass::$dataFields) > 0) {
         $modelClass::updateOrCreate(
           [
             "id" => $this->id
@@ -348,6 +370,8 @@ class EntityModel extends KusikusiModel
         ->with('medium');
   }
 
+
+
   /**
    * Scope a query to only include relations where the given id is called.
    *
@@ -366,6 +390,8 @@ class EntityModel extends KusikusiModel
   //         ;
   //   })->orderBy('rel_invR.depth', $order);
   // }
+
+
 
   /**
    * Scope a query to include the contents.
@@ -397,6 +423,31 @@ class EntityModel extends KusikusiModel
   }
 
   /**
+   * Scope a query include entity's data fields.
+   *
+   * @param  \Illuminate\Database\Eloquent\Builder $query
+   * @param  string $tags The id of the Entity
+   * @return \Illuminate\Database\Eloquent\Builder
+   */
+  // public function scopeWithData($query)
+  // {
+  //   $modelClass = Entity::getClassFromModelId($this->model);
+  //   if ($modelClass !== NULL && count($modelClass::$dataFields) > 0) {
+  //     $data_fields = params_as_array(func_get_args(), 1);
+  //     if (count($data_fields) == 0) {
+  //       $query->with($this->model);
+  //     } else {
+  //       $query->with([$this->model => function($query) use ($data_fields) {
+  //         foreach ($data_fields as $field) {
+  //           $query->addSelect($field);
+  //         }
+  //       }]);
+  //     }
+  //   }
+  //   return $query;
+  // }
+
+  /**
    * Scope a query include relations of type medium.
    *
    * @param  \Illuminate\Database\Eloquent\Builder $query
@@ -420,7 +471,6 @@ class EntityModel extends KusikusiModel
     });
     return $query;
   }
-
 
   /**
    * Scope a query to order by a content field.
@@ -526,6 +576,19 @@ class EntityModel extends KusikusiModel
   }
 
   /**
+   * Get the other models related.
+   */
+  // public function data()
+  // {
+  //   $modelClass = Entity::getDataClass($this->model);
+  //   if ($modelClass && count($modelClass::$dataFields) > 0) {
+  //     return $this->hasOne($modelClass, 'id');
+  //   } else {
+  //     return $this->hasOne('App\Models\Entity', 'id');
+  //   }
+  // }
+
+  /**
    * The relations that belong to the entity.
    */
   public function relations()
@@ -571,11 +634,11 @@ class EntityModel extends KusikusiModel
   /**
    * The relation data between two entities
    */
-  public function relationData()
-  {
-    return $this
-        ->hasMany('Cuatromedios\Kusikusi\Models\Relation', 'called_id');
-  }
+  // public function relationData()
+  // {
+  //   return $this
+  //       ->hasMany('Cuatromedios\Kusikusi\Models\Relation', 'called_id');
+  // }
 
   /**
    * Dinamically creates relations
@@ -612,6 +675,16 @@ class EntityModel extends KusikusiModel
   }
 
   /**
+   * Deletes an specified relation
+   */
+  public function deleteRelation($kind, $called_id)
+  {
+    $where = ['caller_id' => $this->id, 'called_id' => $called_id, 'kind' => $kind];
+    self::updateRelationVersion($this->id, $called_id);
+    Relation::where($where)->delete();
+  }
+
+  /**
    * Updates the entity version, tree version and full version of the given entity
    * as well as it´s ancestors (and inverse relations)
    * @param $id
@@ -640,7 +713,7 @@ class EntityModel extends KusikusiModel
 
     // Now updates the tree and full version of the relations entity's ancestors and the relation version of the given entity
     $relateds = Entity::where('id', $entity_id)->withInverseRelations()->get()->compact();
-    if (count($relateds[0]['inverse_relations']) > 0) {
+    if (count($relateds) > 0 && count($relateds[0]['inverse_relations']) > 0) {
       foreach ($relateds[0]['inverse_relations'] as $related) {
         $ancestors = Entity::select()->ancestorOf($related['id'])->get();
         if (!empty($ancestors)) {
