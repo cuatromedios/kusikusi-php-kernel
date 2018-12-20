@@ -489,8 +489,26 @@ class EntityModel extends KusikusiModel
           ->where('field', '=', $field)
       ;
     });
-    //$query->addSelect("contents.value as orderField");
     $query->orderBy("content_for_order.value", $order);
+  }
+
+  /**
+   * Scope a query to order by a data field.
+   *
+   * @param  \Illuminate\Database\Eloquent\Builder $query
+   * @param  string $content_fields The id of the Entity
+   * @return \Illuminate\Database\Eloquent\Builder
+   */
+  public function scopeOrderByData($query, $model, $field, $order = "asc")
+  {
+    if ($order != 'desc') {
+      $order = 'asc';
+    }
+    $table = str_plural($model);
+    $query->leftJoin($table, function ($join) use ($table, $field) {
+      $join->on("{$table}.id", '=', 'entities.id');
+    });
+    $query->orderBy("{$table}.{$field}", $order);
   }
 
 
