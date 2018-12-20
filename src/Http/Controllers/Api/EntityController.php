@@ -40,7 +40,7 @@ class EntityController extends Controller
         $permissions = Auth::user()->permissions;
         // TODO: Get every entity descendant of the user's 'home'
         $query = Entity::select();
-        $query = deserialize_select($query, $request);
+        $query = process_querystring($query, $request);
         $entity = $query->get()->compact();
         if (Gate::allows(AuthServiceProvider::READ_ALL)) {
             return (new ApiResponse($entity, TRUE))->response();
@@ -64,7 +64,7 @@ class EntityController extends Controller
     try {
       $lang = $request->input('lang', Config::get('general.langs')[0]);
       $query = Entity::select();
-      $query = deserialize_select($query, $request);
+      $query = process_querystring($query, $request);
       //TODO: Select attached data fields
       $entity = $query->find($id);
       if ($entity != null) {
@@ -196,7 +196,7 @@ class EntityController extends Controller
     try {
         $lang = $request->input('lang', Config::get('general.langs')[0]);
         $query = Entity::select();
-        $query = deserialize_select($query, $request);
+        $query = process_querystring($query, $request);
         //TODO: Select attached data fields
         $entity = $query->parentOf($id)->get()->compact();
         if(count($entity) > 0) {
@@ -225,7 +225,7 @@ class EntityController extends Controller
     try {
         $lang = $request->input('lang', Config::get('general.langs')[0]);
         $query = Entity::select();
-        $query = deserialize_select($query, $request);
+        $query = process_querystring($query, $request);
         //TODO: Select attached data fields
         $entity = $query->childOf($id)->get()->compact();
         if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getChildren', "{}"])) {
@@ -250,7 +250,7 @@ class EntityController extends Controller
     try {
         $lang = $request->input('lang', Config::get('general.langs')[0]);
         $query = Entity::select();
-        $query = deserialize_select($query, $request);
+        $query = process_querystring($query, $request);
         //TODO: Select attached data fields
         $entity = $query->ancestorOf($id)->get()->compact();
         if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getAncestors', "{}"])) {
@@ -275,7 +275,7 @@ class EntityController extends Controller
     try {
         $lang = $request->input('lang', Config::get('general.langs')[0]);
         $query = Entity::select();
-        $query = deserialize_select($query, $request);
+        $query = process_querystring($query, $request);
         //TODO: Select attached data fields
         $entity = $query->descendantOf($id)->get()->compact();
         if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getDescendants', "{}"])) {
@@ -300,7 +300,7 @@ class EntityController extends Controller
     try {
       $lang = $request->input('lang', Config::get('general.langs')[0]);
       $query = Entity::select();
-      $query = deserialize_select($query, $request);
+      $query = process_querystring($query, $request);
       //TODO: Select attached data fields
       $entity = $query->withRelations(function($relation) use ($kind) {
         if ($kind == NULL) {
@@ -334,7 +334,7 @@ class EntityController extends Controller
     try {
       $lang = $request->input('lang', Config::get('general.langs')[0]);
       $query = Entity::select();
-      $query = deserialize_select($query, $request);
+      $query = process_querystring($query, $request);
       //TODO: Select attached data fields
       $entity = $query->withInverseRelations(function($relation) use ($kind) {
         if ($kind == NULL) {
