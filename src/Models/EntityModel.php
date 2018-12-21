@@ -892,4 +892,5 @@ class EntityModel extends KusikusiModel
     }
   }
 
+  //TODO: Override the select method of the model, to change all fields set to full entities.field format and avoid ambiguous id fields when joining other tables
 }
