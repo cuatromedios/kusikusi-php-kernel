@@ -193,15 +193,13 @@ class EntityModel extends KusikusiModel
    * @param  array $data An arrray of one or more contents in field => value format for example ["format" => "png", "size", "1080"]
    * @param  string $model required to identify in which table the data wil be saved
    */
-  public function addData($contents, $model)
+  public function addData($data, $model)
   {
     $modelClass = Entity::getClassFromModelId($model);
-      if (count($modelClass::$dataFields) > 0) {
-        $modelClass::updateOrCreate(
-          [
-            "id" => $this->id
-          ], $contents);
-      }
+    $modelClass::updateOrCreate(
+      [
+        "id" => $this->id
+      ], $data);
   }
   
   /**************************
@@ -846,6 +844,10 @@ class EntityModel extends KusikusiModel
         $entity->addData($entity['data'], $entity['model']);
         unset($entity['data']);
       }
+      if (isset($entity[$entity['model']])) {
+        $entity->addData($entity[$entity['model']], $entity['model']);
+        unset($entity[$entity['model']]);
+      }
     });
 
 
@@ -875,6 +877,10 @@ class EntityModel extends KusikusiModel
       if (isset($entity['data'])) {
         $entity->addData($entity['data'], $entity['model']);
         unset($entity['data']);
+      }
+      if (isset($entity[$entity['model']])) {
+        $entity->addData($entity[$entity['model']], $entity['model']);
+        unset($entity[$entity['model']]);
       }
     });
   }
