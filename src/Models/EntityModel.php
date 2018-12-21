@@ -456,7 +456,7 @@ class EntityModel extends KusikusiModel
   {
     $tags = params_as_array(func_get_args(), 1);
     $query->withRelations(function($query) use ($tags) {
-      $query->select('id')
+      $query->select('*')
           ->whereModel('medium')
           ->whereKind('medium');
           if (count($tags) > 0) {
