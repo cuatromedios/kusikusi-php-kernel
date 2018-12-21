@@ -34,19 +34,17 @@ class MediaController extends Controller
      * @param $preset
      * @return Image
      */
-    public function get($id, $preset, $friendly)
+    public function get($id, $preset, $friendly = NULL)
     {
         //die("{$id} {$preset} {$friendly}");
         // TODO: Review if the user can read the media
         try {
             $entity = Entity::with('medium')->findOrFail($id);
         } catch (\Exception $e) {
-            // Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => ApiResponse::TEXT_NOTFOUND]));
             return (new ApiResponse(NULL, FALSE, 'Media ' . ApiResponse::TEXT_NOTFOUND, ApiResponse::STATUS_NOTFOUND))->response();
         }
         $presetSettings = Config::get('media.presets.' . $preset, NULL);
         if (NULL === $presetSettings) {
-          // Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => 'Preset ' . ApiResponse::TEXT_NOTFOUND]));
             return (new ApiResponse(NULL, FALSE, 'Preset ' . ApiResponse::TEXT_NOTFOUND, ApiResponse::STATUS_NOTFOUND))->response();
         }
 
@@ -63,7 +61,6 @@ class MediaController extends Controller
             );
         }
         if (!$exists = Storage::disk('media_original')->exists($originalFilePath)) {
-            // Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'get', json_encode(["error" => 'Original media ' . ApiResponse::TEXT_NOTFOUND]));
             return (new ApiResponse(NULL, FALSE, 'Original media ' . ApiResponse::TEXT_NOTFOUND, ApiResponse::STATUS_NOTFOUND))->response();
         }
         $filedata = Storage::disk('media_original')->get($originalFilePath);
