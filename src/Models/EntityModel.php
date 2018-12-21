@@ -843,8 +843,7 @@ class EntityModel extends KusikusiModel
       if (isset($entity['data'])) {
         $entity->addData($entity['data'], $entity['model']);
         unset($entity['data']);
-      }
-      if (isset($entity[$entity['model']])) {
+      } elseif (isset($entity[$entity['model']]) && is_array($entity[$entity['model']])) {
         $entity->addData($entity[$entity['model']], $entity['model']);
         unset($entity[$entity['model']]);
       }
@@ -877,8 +876,7 @@ class EntityModel extends KusikusiModel
       if (isset($entity['data'])) {
         $entity->addData($entity['data'], $entity['model']);
         unset($entity['data']);
-      }
-      if (isset($entity[$entity['model']])) {
+      } elseif (isset($entity[$entity['model']]) && is_array($entity[$entity['model']])) {
         $entity->addData($entity[$entity['model']], $entity['model']);
         unset($entity[$entity['model']]);
       }
