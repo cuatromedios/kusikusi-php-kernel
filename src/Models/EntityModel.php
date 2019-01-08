@@ -523,6 +523,14 @@ class EntityModel extends KusikusiModel
     return $query;
   }
 
+  public static function onlyTags()
+  {
+    $tags = join(" ", params_as_array(func_get_args(), 0));
+    return function ($query) use ($tags) {
+      $query->whereRaw("MATCH (tags) AGAINST (? IN BOOLEAN MODE)" , $tags);
+    };
+  }
+
   /**
    * Appends relations of an Entity.
    *
@@ -615,6 +623,14 @@ class EntityModel extends KusikusiModel
         ->as('relation')
         ->withPivot('kind', 'position', 'depth', 'tags')
         ->withTimestamps();
+  }
+
+  /**
+   * The relations that belong to the entity.
+   */
+  public function media()
+  {
+    return $this->relations()->where('kind', '=', 'medium')->orderBy('position', 'asc')->withContents('title');
   }
 
   /**
