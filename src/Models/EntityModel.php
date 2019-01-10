@@ -630,7 +630,7 @@ class EntityModel extends KusikusiModel
    */
   public function media()
   {
-    return $this->relations()->where('kind', '=', 'medium')->orderBy('position', 'asc')->withContents('title');
+    return $this->relations()->where('kind', '=', 'medium')->orderBy('position', 'asc')->withContents('title')->with('medium');
   }
 
   /**
