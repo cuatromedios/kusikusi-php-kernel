@@ -456,7 +456,7 @@ class EntityModel extends KusikusiModel
   {
     $tags = params_as_array(func_get_args(), 1);
     $query->withRelations(function($query) use ($tags) {
-      $query->select('id')
+      $query->select('*')
           ->whereModel('medium')
           ->whereKind('medium');
           if (count($tags) > 0) {
@@ -521,6 +521,14 @@ class EntityModel extends KusikusiModel
     $tags = join(" ", params_as_array(func_get_args(), 1));
     $query->whereRaw("MATCH (tags) AGAINST (? IN BOOLEAN MODE)" , $tags);
     return $query;
+  }
+
+  public static function onlyTags()
+  {
+    $tags = join(" ", params_as_array(func_get_args(), 0));
+    return function ($query) use ($tags) {
+      $query->whereRaw("MATCH (tags) AGAINST (? IN BOOLEAN MODE)" , $tags);
+    };
   }
 
   /**
@@ -615,6 +623,14 @@ class EntityModel extends KusikusiModel
         ->as('relation')
         ->withPivot('kind', 'position', 'depth', 'tags')
         ->withTimestamps();
+  }
+
+  /**
+   * The relations that belong to the entity.
+   */
+  public function media()
+  {
+    return $this->relations()->where('kind', '=', 'medium')->orderBy('position', 'asc')->withContents('title')->with('medium');
   }
 
   /**
