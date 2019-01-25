@@ -21,19 +21,19 @@ class ApiResponse
     const STATUS_METHODNOTALLOWED = 404;
     const STATUS_INTERNALERROR = 500;
 
-    private $_data;
+    private $_result;
     private $_success;
     private $_status;
     private $_info;
-    public function __construct($data, $success = TRUE, $info = NULL, $status = 200)
+    public function __construct($result, $success = TRUE, $info = NULL, $status = 200)
     {
-        $this->setData($data);
+        $this->setResult($result);
         $this->setSuccess($success);
         $this->setStatus($status);
         $this->setInfo($info);
     }
-    public function getData() {
-        return $this->_data;
+    public function getResult() {
+        return $this->_result;
     }
     public function getSuccess() {
         return $this->_success;
@@ -44,8 +44,8 @@ class ApiResponse
     public function getInfo() {
         return $this->_info;
     }
-    public function setData($data) {
-        $this->_data = $data;
+    public function setResult($result) {
+        $this->_result = $result;
     }
     public function setSuccess($success) {
         if ($success === TRUE || $success === 'true') {
@@ -65,7 +65,7 @@ class ApiResponse
     public function response() {
         $response = new Response([
             "success" =>  $this->getSuccess(),
-            "data" =>  $this->getData(),
+            "result" =>  $this->getResult(),
             "info" =>  $this->getInfo()
         ], $this->getStatus());
         return $response;
