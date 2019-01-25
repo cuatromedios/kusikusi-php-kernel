@@ -204,8 +204,7 @@ class EntityController extends Controller
   public function getParent($id, Request $request)
   {
     try {
-        if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$entity[0]['id'], 'getParent', "{}"])) {
-          $lang = $request->input('lang', Config::get('general.langs')[0]);
+        if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id])) {
           $query = Entity::select();
           $query = process_querystring($query, $request);
           //TODO: Select attached data fields
