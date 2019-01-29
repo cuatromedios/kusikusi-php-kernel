@@ -48,7 +48,7 @@ class UserController extends Controller
       }
 
       if ($authResult !== FALSE) {
-        Activity::add($authResult['entity']['user']['id'], '', 'login', TRUE, '', "{}");
+        Activity::add($authResult['user']['id'], '', 'login', TRUE, '', "{}");
         return (new ApiResponse($authResult, TRUE))->response();
       } else {
         $status = 401;
