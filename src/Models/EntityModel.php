@@ -337,14 +337,19 @@ class EntityModel extends KusikusiModel
    *
    * @param  \Illuminate\Database\Eloquent\Builder $query
    * @param  string $entity_id The id of the entity calling the relations
+   * @param  string $kind Filter by type of relation, if ommited all relations but 'ancestor' will be included
    * @return \Illuminate\Database\Eloquent\Builder
    */
-  public function scopeRelatedBy($query, $entity_id)
+  public function scopeRelatedBy($query, $entity_id, $kind = null)
   {
-    $query->join('relations as rel_by', function ($join) use ($entity_id) {
+    $query->join('relations as rel_by', function ($join) use ($entity_id, $kind) {
       $join->on('rel_by.called_id', '=', 'id')
-          ->where('rel_by.caller_id', '=', $entity_id)
-          ->where('rel_by.kind', '!=', 'ancestor');
+          ->where('rel_by.caller_id', '=', $entity_id);
+      if ($kind === null) {
+        $join->where('rel_by.kind', '!=', 'ancestor');
+      } else {
+        $join->where('rel_by.kind', '=', $kind);
+      }
     })->addSelect('rel_by.kind', 'rel_by.position', 'rel_by.depth', 'rel_by.tags');
   }
 
