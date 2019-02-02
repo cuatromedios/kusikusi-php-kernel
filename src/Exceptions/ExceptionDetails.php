@@ -25,8 +25,8 @@ class ExceptionDetails
         $result["info"]["message"] = $messages = implode(" ", array_flatten($e->validator->getMessageBag()->getMessages()));
         break;
       default:
-        $result["info"]["code"] = ApiResponse::STATUS_INTERNALERROR;
-        $result["info"]["message"] = ApiResponse::TEXT_INTERNALERROR;
+        $result["info"]["code"] = $e->getCode() ?? $e->getCode() != 0 ?  $e->getCode() : ApiResponse::STATUS_INTERNALERROR;
+        $result["info"]["message"] =  $e->getMessage() ?? ApiResponse::TEXT_INTERNALERROR;
     }
     if ('local' === env('APP_ENV', config('app.env', 'production'))) {
       $result['info']['exception'] = [
