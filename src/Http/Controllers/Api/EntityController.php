@@ -107,7 +107,7 @@ class EntityController extends Controller
             Activity::add(\Auth::user()['id'], $entityPosted['id'], AuthServiceProvider::WRITE_ENTITY, TRUE, 'post', json_encode(["body" => $body]));
             return (new ApiResponse($entityPosted, TRUE))->response();
         } else {
-            Activity::add(\Auth::user()['id'], '', AuthServiceProvider::WRITE_ENTITY, FALSE, 'post', json_encode(["body" => $body, "error" => ApiResponse::TEXT_FORBIDDEN]));
+            Activity::add(\Auth::user()['id'], '', AuthServiceProvider::WRITE_ENTITY, FALSE, 'post', json_encode(["body" => $request->json()->all(), "error" => ApiResponse::TEXT_FORBIDDEN]));
             return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
         }
     } catch (\Throwable $e) {
@@ -133,7 +133,7 @@ class EntityController extends Controller
         Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, TRUE, 'patch', json_encode(["body" => $body]));
         return (new ApiResponse($entityPatched, TRUE))->response();
       } else {
-        Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, FALSE, 'patch', json_encode(["body" => $body, "error" => ApiResponse::TEXT_FORBIDDEN]));
+        Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, FALSE, 'patch', json_encode(["body" => $request->json()->all(), "error" => ApiResponse::TEXT_FORBIDDEN]));
         return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
       }
     } catch (\Throwable $e) {
@@ -229,6 +229,54 @@ class EntityController extends Controller
   }
 
   /**
+   * Display entity's parent.
+   *
+   * @param $id
+   * @return \Illuminate\Http\Response
+   */
+  public function getTree($id, Request $request)
+  {
+    try {
+      if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getTree', "{}"])) {
+        $lang = $request->input('lang', Config::get('general.langs')[0]);
+        $query = Entity::select()
+                ->descendantOf($id, 'asc');
+        $query = process_querystring($query, $request) ->addSelect('id', 'parent_id');
+        $entities = $query->get()->compact();
+        $tree = self::buildTree($entities, $id);
+        if (count($entities) > 0) {
+          Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getParent', '{}');
+          return (new ApiResponse($tree, TRUE))->response();
+        } else {
+          Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'getParent', json_encode(["error" => ApiResponse::TEXT_NOTFOUND]));
+          return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_NOTFOUND, ApiResponse::STATUS_NOTFOUND))->response();
+        }
+      } else {
+        Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'getParent', json_encode(["error" => ApiResponse::TEXT_FORBIDDEN]));
+        return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+      }
+    } catch (\Throwable $e) {
+      $exceptionDetails = ExceptionDetails::filter($e);
+      Activity::add(Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'getParent', json_encode(["error" => $exceptionDetails]));
+      return (new ApiResponse(NULL, FALSE, $exceptionDetails, $exceptionDetails['code']))->response();
+    }
+  }
+  private static function buildTree(array &$entities, $parent_id = 'root') {
+    $branch = [];
+    foreach ($entities as &$entity) {
+      if ($entity['parent_id'] == $parent_id) {
+        $children = self::buildTree($entities, $entity['id']);
+        if ($children) {
+          $entity['children'] = $children;
+        }
+        $branch[] = $entity;
+        unset($entity);
+      }
+    }
+    return $branch;
+  }
+
+  /**
    * Display entity's children.
    *
    * @param $id
@@ -268,7 +316,7 @@ class EntityController extends Controller
         if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getAncestors', "{}"])) {
           $lang = $request->input('lang', Config::get('general.langs')[0]);
           $query = Entity::select();
-          $query = process_querystring($query, $request);
+          $query = process_querystring($query, $request, ['treealias' => 'rel_tree_anc']);
           //TODO: Select attached data fields
           $entity = $query->ancestorOf($id)->get()->compact();
           Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getAncestors', '{}');

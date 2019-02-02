@@ -3,7 +3,6 @@
 namespace Cuatromedios\Kusikusi\Models;
 
 use App\Models\Entity;
-use Cuatromedios\Kusikusi\Models\Relation;
 use Cuatromedios\Kusikusi\Models\Http\ApiResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Config;
@@ -201,6 +200,78 @@ class EntityModel extends KusikusiModel
         "id" => $this->id
       ], $data);
   }
+
+  public function recreateTree($new_parent_id = null, $withDescendants = true) {
+    // TODO: Use Queues to process all descendants need to be updated, this may take too much time.
+    ini_set('max_execution_time', 300);
+    $relationsToCreate = [];
+    if (null == $new_parent_id) {
+      $new_parent_id = $this->parent_id;
+    }
+    $newParentEntity = Entity::find($new_parent_id);
+
+    $relationsToCreate[] = $this->updatedRelationObject($newParentEntity['id'], 1);
+    $ancestors = ($newParentEntity->relations()->where('kind', 'ancestor')->orderBy('depth'))->get();
+    for ($a = 0; $a < count($ancestors); $a++) {
+      $relationsToCreate[] = $this->updatedRelationObject($ancestors[$a]['id'], $a + 2);
+    }
+
+    // Queue::push(new RecreateAncestorRelationJob($relationsToCreate));
+
+    Relation::where('caller_id', $this->id)
+        ->where('kind', 'ancestor')
+        ->delete();
+    for ($r = 0; $r < count($relationsToCreate); $r++) {
+      $this->addRelation($relationsToCreate[$r]['relation']);
+    }
+
+    if ($withDescendants) {
+      $descendants = Entity::select('id', 'parent_id')->descendantOf($this->id, 'asc')->get();
+      foreach ($descendants as $descendant) {
+        file_put_contents('rt.txt', 'recreate '.$descendant->id.' ' . date("Y-m-d H:i:s")."\n", FILE_APPEND);
+
+        $descendant->recreateTree($descendant->parent_id, false);
+        // Queue::push('tree', 'RecreateAncestorRelationJob', $descendant, 'tree');
+      }
+    }
+  }
+
+  /*private function addAncestorRelation($relation) {
+    $this->addRelation([
+      'id' => $relation['id'],
+      'kind' => 'ancestor',
+      'position' => $relation['position'],
+      'depth' => $relation['depth'],
+      'tags' => $relation['tags']
+    ]);
+  }*/
+  private function updatedRelationObject($ancestor_id, $depth) {
+    $previousRelation = Relation::where("caller_id", $this->id);
+    if ($depth != 1) {
+      $previousRelation->where('called_id', $ancestor_id);
+    } else {
+      $previousRelation->where('depth', 1);
+    }
+    $previousRelation->where('kind', 'ancestor');
+    $previousRelation = $previousRelation->first();
+    $tags = [];
+    $position = 0;
+    if ($previousRelation) {
+      $position = $previousRelation->position;
+      $tags = $previousRelation->tags;
+    }
+    return [
+        'id' => $this->id,
+        'relation' => [
+          'id' => $ancestor_id,
+          'kind' => 'ancestor',
+          'position' => $position,
+          'depth' => $depth,
+          'tags' => $tags
+      ]
+    ];
+  }
+
   
   /**************************
    * 
@@ -300,12 +371,12 @@ class EntityModel extends KusikusiModel
     if ($order != 'asc') {
       $order = 'desc';
     }
-    $query->join('relations as rel_anc', function ($join) use ($entity_id) {
-      $join->on('rel_anc.called_id', '=', 'id')
-          ->where('rel_anc.caller_id', '=', $entity_id)
-          ->where('rel_anc.kind', '=', 'ancestor')
+    $query->join('relations as rel_tree_anc', function ($join) use ($entity_id) {
+      $join->on('rel_tree_anc.called_id', '=', 'id')
+          ->where('rel_tree_anc.caller_id', '=', $entity_id)
+          ->where('rel_tree_anc.kind', '=', 'ancestor')
           ;
-    })->orderBy('rel_anc.depth', $order);
+    })->orderBy('rel_tree_anc.depth', $order);
   }
 
   /**
@@ -321,15 +392,14 @@ class EntityModel extends KusikusiModel
       $order = 'desc';
     }
     if ($depth == NULL) {
-      $depth = 99;
+      $depth = 9999;
     }
-    $query->join('relations as rel_des', function ($join) use ($entity_id, $depth) {
-      $join->on('rel_des.caller_id', '=', 'id')
-          ->where('rel_des.called_id', '=', $entity_id)
-          ->where('rel_des.kind', '=', 'ancestor')
-          ->where('rel_des.depth', '<=', $depth)
-          ;
-    })->orderBy('rel_des.depth', $order);
+    $query->join('relations as rel_tree_des', function ($join) use ($entity_id, $depth) {
+      $join->on('rel_tree_des.caller_id', '=', 'id')
+          ->where('rel_tree_des.called_id', '=', $entity_id)
+          ->where('rel_tree_des.kind', '=', 'ancestor')
+          ->where('rel_tree_des.depth', '<=', $depth);
+    })->orderBy('rel_tree_des.depth', $order);
   }
 
   /**
@@ -647,6 +717,7 @@ class EntityModel extends KusikusiModel
         ->belongsToMany('App\Models\Entity', 'relations', 'called_id', 'caller_id')
         ->using('Cuatromedios\Kusikusi\Models\Relation')
         ->as('inverseRelations')
+        ->where('kind', '!=', 'ancestor')
         ->withPivot('kind', 'position', 'depth', 'tags')
         ->withTimestamps();
   }
@@ -808,15 +879,15 @@ class EntityModel extends KusikusiModel
   /**
    * Get true if an entity is descendant of another.
    *
-   * @param string $id1 The id of the reference entity
-   * @param string $id2 The id of the entity to know is an ancestor of
+   * @param string $isEntity_id The id of the reference entity
+   * @param string $descendantOf_id The id of the entity to know is an ancestor of
    * @return Boolean
    */
-  public static function isDescendant($id1, $id2)
+  public static function isDescendant($isEntity_id, $descendantOf_id)
   {
-    $ancestors = Entity::select('id')->ancestorOf($id1)->get();
+    $ancestors = Entity::select('id')->ancestorOf($isEntity_id)->get();
     foreach ($ancestors as $ancestor) {
-      if ($ancestor->id === $id2) {
+      if ($ancestor->id === $descendantOf_id) {
         return true;
       }
     }
@@ -825,16 +896,16 @@ class EntityModel extends KusikusiModel
   /**
    * Get true if an entity is descendant of another or itself.
    *
-   * @param string $id1 The id of the reference entity
-   * @param string $id2 The id of the entity to know is an ancestor of
+   * @param string $isEntity_id The id of the reference entity
+   * @param string $descendantOf_id The id of the entity to know is an ancestor of
    * @return Boolean
    */
-  public static function isSelfOrDescendant($id1, $id2)
+  public static function isSelfOrDescendant($isEntity_id, $descendantOf_id)
   {
-    if ($id1 === $id2) {
+    if ($isEntity_id === $descendantOf_id) {
       return true;
     } else {
-      return Entity::isDescendant($id1, $id2);
+      return Entity::isDescendant($isEntity_id, $descendantOf_id);
     }
   }
 
@@ -888,10 +959,11 @@ class EntityModel extends KusikusiModel
     });
 
     self::updating(function ($entity) {
-      if (isset($entity['contents'])) {
+
+      /*if (isset($entity['contents'])) {
         $entity->addContents($entity['contents']);
         unset($entity['contents']);
-      }
+      }*/
 
       // Set data in the correspondent table
       if (isset($entity['data'])) {
@@ -901,6 +973,18 @@ class EntityModel extends KusikusiModel
         $entity->addData($entity[$entity['model']], $entity['model']);
         unset($entity[$entity['model']]);
       }
+
+      $oldEntity = Entity::find($entity->id);
+      if ($oldEntity->parent_id !== $entity->parent_id) {
+        if (self::isSelfOrDescendant( $entity->parent_id, $entity->id)) {
+          throw new \Exception('Can not change the parent of an entity to a descendant of itself', 401);
+        }
+        $oldEntity->recreateTree($entity->parent_id);
+      }
+    });
+
+    self::updated(function ($entity) {
+
     });
   }
 
