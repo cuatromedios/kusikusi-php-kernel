@@ -240,7 +240,7 @@ class EntityController extends Controller
       if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getTree', "{}"])) {
         $lang = $request->input('lang', Config::get('general.langs')[0]);
         $query = Entity::select()
-                ->descendantOf($id, 'asc');
+                ->descendantOf($id, 'asc', $request['depth'] ?? 999);
         $query = process_querystring($query, $request) ->addSelect('id', 'parent_id');
         $entities = $query->get()->compact();
         $tree = self::buildTree($entities, $id);
