@@ -208,7 +208,7 @@ class EntityModel extends KusikusiModel
     if (null == $new_parent_id) {
       $new_parent_id = $this->parent_id;
     }
-    $newParentEntity = Entity::find($new_parent_id);
+    $newParentEntity = Entity::withTrashed()->find($new_parent_id);
 
     $relationsToCreate[] = $this->updatedRelationObject($newParentEntity['id'], 1);
     $ancestors = ($newParentEntity->relations()->where('kind', 'ancestor')->orderBy('depth'))->get();
