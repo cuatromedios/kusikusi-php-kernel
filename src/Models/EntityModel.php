@@ -216,8 +216,6 @@ class EntityModel extends KusikusiModel
       $relationsToCreate[] = $this->updatedRelationObject($ancestors[$a]['id'], $a + 2);
     }
 
-    // Queue::push(new RecreateAncestorRelationJob($relationsToCreate));
-
     Relation::where('caller_id', $this->id)
         ->where('kind', 'ancestor')
         ->delete();
@@ -228,23 +226,11 @@ class EntityModel extends KusikusiModel
     if ($withDescendants) {
       $descendants = Entity::select('id', 'parent_id')->descendantOf($this->id, 'asc')->get();
       foreach ($descendants as $descendant) {
-        file_put_contents('rt.txt', 'recreate '.$descendant->id.' ' . date("Y-m-d H:i:s")."\n", FILE_APPEND);
-
         $descendant->recreateTree($descendant->parent_id, false);
-        // Queue::push('tree', 'RecreateAncestorRelationJob', $descendant, 'tree');
       }
     }
   }
 
-  /*private function addAncestorRelation($relation) {
-    $this->addRelation([
-      'id' => $relation['id'],
-      'kind' => 'ancestor',
-      'position' => $relation['position'],
-      'depth' => $relation['depth'],
-      'tags' => $relation['tags']
-    ]);
-  }*/
   private function updatedRelationObject($ancestor_id, $depth) {
     $previousRelation = Relation::where("caller_id", $this->id);
     if ($depth != 1) {
