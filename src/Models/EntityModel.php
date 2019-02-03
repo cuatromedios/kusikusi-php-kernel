@@ -337,7 +337,7 @@ class EntityModel extends KusikusiModel
   public function scopeParentOf($query, $id)
   {
     $query->join('relations as rel_par', function ($join) use ($id) {
-      $join->on('rel_par.called_id', '=', 'id')
+      $join->on('rel_par.called_id', '=', 'entities.id')
           ->where('rel_par.caller_id', '=', $id)
           ->where('rel_par.depth', '=', 1)
           ->where('rel_par.kind', '=', 'ancestor')
@@ -358,7 +358,7 @@ class EntityModel extends KusikusiModel
       $order = 'desc';
     }
     $query->join('relations as rel_tree_anc', function ($join) use ($entity_id) {
-      $join->on('rel_tree_anc.called_id', '=', 'id')
+      $join->on('rel_tree_anc.called_id', '=', 'entities.id')
           ->where('rel_tree_anc.caller_id', '=', $entity_id)
           ->where('rel_tree_anc.kind', '=', 'ancestor')
           ;
@@ -381,7 +381,7 @@ class EntityModel extends KusikusiModel
       $depth = 9999;
     }
     $query->join('relations as rel_tree_des', function ($join) use ($entity_id, $depth) {
-      $join->on('rel_tree_des.caller_id', '=', 'id')
+      $join->on('rel_tree_des.caller_id', '=', 'entities.id')
           ->where('rel_tree_des.called_id', '=', $entity_id)
           ->where('rel_tree_des.kind', '=', 'ancestor')
           ->where('rel_tree_des.depth', '<=', $depth);
@@ -399,7 +399,7 @@ class EntityModel extends KusikusiModel
   public function scopeRelatedBy($query, $entity_id, $kind = null)
   {
     $query->join('relations as rel_by', function ($join) use ($entity_id, $kind) {
-      $join->on('rel_by.called_id', '=', 'id')
+      $join->on('rel_by.called_id', '=', 'entities.id')
           ->where('rel_by.caller_id', '=', $entity_id);
       if ($kind === null) {
         $join->where('rel_by.kind', '!=', 'ancestor');
@@ -419,7 +419,7 @@ class EntityModel extends KusikusiModel
   public function scopeMediaOf($query, $entity_id)
   {
     $query->join('relations as rel_media', function ($join) use ($entity_id) {
-      $join->on('rel_media.called_id', '=', 'id')
+      $join->on('rel_media.called_id', '=', 'entities.id')
           ->where('rel_media.caller_id', '=', $entity_id)
           ->where('rel_media.kind', '=', 'medium');
     })
