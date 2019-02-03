@@ -82,7 +82,7 @@ class EntityModel extends KusikusiModel
 
   /**
    * Deletes an entity and its relations
-   * 
+   *
    * @param boolean $hard Allows to completely delete an entity and its relation from the database
    */
   public function deleteEntity($hard = false)
@@ -94,7 +94,7 @@ class EntityModel extends KusikusiModel
       $modelClass = Entity::getClassFromModelId($this->model);
       if (file_exists($modelClass) && count($modelClass::$dataFields) > 0) {
         $modelClass::destroy($this->id);
-      } 
+      }
       self::updateEntityVersion($this->id);
       $this->relations()->detach();
       $this->forceDelete();
@@ -113,13 +113,13 @@ class EntityModel extends KusikusiModel
     foreach ($contents as $key=>$value) {
       EntityContent::updateOrCreate(
           [
-            "id" => "{$this->id}_{$lang}_{$key}"
+              "id" => "{$this->id}_{$lang}_{$key}"
           ], [
-            "entity_id" => $this->id,
-            "field" => $key,
-            "value" => $value,
-            "lang" => $lang
-          ]);
+          "entity_id" => $this->id,
+          "field" => $key,
+          "value" => $value,
+          "lang" => $lang
+      ]);
     }
   }
 
@@ -196,9 +196,9 @@ class EntityModel extends KusikusiModel
   {
     $modelClass = Entity::getClassFromModelId($model);
     $modelClass::updateOrCreate(
-      [
-        "id" => $this->id
-      ], $data);
+        [
+            "id" => $this->id
+        ], $data);
   }
 
   public function recreateTree($new_parent_id = null, $withDescendants = true) {
@@ -249,35 +249,35 @@ class EntityModel extends KusikusiModel
     return [
         'id' => $this->id,
         'relation' => [
-          'id' => $ancestor_id,
-          'kind' => 'ancestor',
-          'position' => $position,
-          'depth' => $depth,
-          'tags' => $tags
-      ]
+            'id' => $ancestor_id,
+            'kind' => 'ancestor',
+            'position' => $position,
+            'depth' => $depth,
+            'tags' => $tags
+        ]
     ];
   }
 
-  
+
   /**************************
-   * 
+   *
    * ACCESORS
-   * 
+   *
    *************************/
 
-   /**
-    * Creates a virtual field where it determinates whether the entity is published or not
-    *
-    * @return boolean
-    */
-    public function getPublishedAttribute()
-    {
-      $currentDate = Carbon::now();
-      if ($this->active === true && $this->publicated_at <= $currentDate && $this->unpublicated_at > $currentDate && $this->deleted_at === NULL) {
-        return true;
-      }
-      return false;
+  /**
+   * Creates a virtual field where it determinates whether the entity is published or not
+   *
+   * @return boolean
+   */
+  public function getPublishedAttribute()
+  {
+    $currentDate = Carbon::now();
+    if ($this->active === true && $this->publicated_at <= $currentDate && $this->unpublicated_at > $currentDate && $this->deleted_at === NULL) {
+      return true;
     }
+    return false;
+  }
 
 
   /**************************
@@ -361,7 +361,7 @@ class EntityModel extends KusikusiModel
       $join->on('rel_tree_anc.called_id', '=', 'entities.id')
           ->where('rel_tree_anc.caller_id', '=', $entity_id)
           ->where('rel_tree_anc.kind', '=', 'ancestor')
-          ;
+      ;
     })->orderBy('rel_tree_anc.depth', $order);
   }
 
@@ -520,11 +520,11 @@ class EntityModel extends KusikusiModel
       $query->select('*')
           ->whereModel('medium')
           ->whereKind('medium');
-          if (count($tags) > 0) {
-            $query->whereTags($tags);
-          }
-          $query->with(['medium' => function($query) {
-          }])
+      if (count($tags) > 0) {
+        $query->whereTags($tags);
+      }
+      $query->with(['medium' => function($query) {
+      }])
           ->orderBy('position', 'asc')
           ->withContents('title');
     });
@@ -543,7 +543,7 @@ class EntityModel extends KusikusiModel
     if ($order != 'desc') {
       $order = 'asc';
     }
-    $query->join('contents as content_for_order', function ($join) use ($field) {
+    $query->leftJoin('contents as content_for_order', function ($join) use ($field) {
       $join->on('content_for_order.entity_id', '=', 'entities.id')
           ->where('field', '=', $field)
       ;
@@ -797,11 +797,11 @@ class EntityModel extends KusikusiModel
     if (!empty($ancestors)) {
       foreach ($ancestors as $ancestor) {
         DB::table('entities')
-          ->where('id', $ancestor['id'])
-          ->increment('tree_version');
+            ->where('id', $ancestor['id'])
+            ->increment('tree_version');
         DB::table('entities')
-          ->where('id', $ancestor['id'])
-          ->increment('full_version');
+            ->where('id', $ancestor['id'])
+            ->increment('full_version');
       }
     }
 
@@ -813,16 +813,16 @@ class EntityModel extends KusikusiModel
         if (!empty($ancestors)) {
           foreach ($ancestors as $ancestor) {
             DB::table('entities')
-              ->where('id', $ancestor['id'])
-              ->increment('tree_version');
+                ->where('id', $ancestor['id'])
+                ->increment('tree_version');
             DB::table('entities')
-              ->where('id', $ancestor['id'])
-              ->increment('full_version');
+                ->where('id', $ancestor['id'])
+                ->increment('full_version');
           }
         }
         DB::table('entities')
-          ->where('id', $related['id'])
-          ->increment('relations_version');
+            ->where('id', $related['id'])
+            ->increment('relations_version');
       }
     }
   }
@@ -844,19 +844,19 @@ class EntityModel extends KusikusiModel
           $ancestors = Entity::select()->ancestorOf($related['id'])->get();
           if (!empty($ancestors)) {
             foreach ($ancestors as $ancestor) {
-                DB::table('entities')
-                 ->where('id', $ancestor['id'])
-                 ->increment('tree_version');
-                DB::table('entities')
-                 ->where('id', $ancestor['id'])
-                 ->increment('full_version');
+              DB::table('entities')
+                  ->where('id', $ancestor['id'])
+                  ->increment('tree_version');
+              DB::table('entities')
+                  ->where('id', $ancestor['id'])
+                  ->increment('full_version');
             }
           }
         }
         // Now update the relation_version of the caller entity
         DB::table('entities')->whereIn('id', $relateds[0]['inverse_relations'])
-        ->where('id', $caller)
-        ->increment('relations_version');
+            ->where('id', $caller)
+            ->increment('relations_version');
       }
     }
   }
@@ -871,7 +871,7 @@ class EntityModel extends KusikusiModel
    */
   public static function isDescendant($isEntity_id, $descendantOf_id)
   {
-    $ancestors = Entity::select('id')->ancestorOf($isEntity_id)->get();
+    $ancestors = Entity::select('entities.id')->ancestorOf($isEntity_id)->get();
     foreach ($ancestors as $ancestor) {
       if ($ancestor->id === $descendantOf_id) {
         return true;

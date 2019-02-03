@@ -241,7 +241,8 @@ class EntityController extends Controller
         $lang = $request->input('lang', Config::get('general.langs')[0]);
         $query = Entity::select()
                 ->descendantOf($id, 'asc', $request['depth'] ?? 999);
-        $query = process_querystring($query, $request) ->addSelect('id', 'parent_id');
+        $query = process_querystring($query, $request)
+            ->addSelect('entities.id', 'entities.parent_id');
         $entities = $query->get()->compact();
         $tree = self::buildTree($entities, $id);
         if (count($entities) > 0) {
