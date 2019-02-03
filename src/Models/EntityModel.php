@@ -319,7 +319,7 @@ class EntityModel extends KusikusiModel
   public function scopeChildOf($query, $parent_id)
   {
     $query->join('relations as rel_child', function ($join) use ($parent_id) {
-      $join->on('rel_child.caller_id', '=', 'id')
+      $join->on('rel_child.caller_id', '=', 'entities.id')
           ->where('rel_child.called_id', '=', $parent_id)
           ->where('rel_child.depth', '=', 1)
           ->where('rel_child.kind', '=', 'ancestor')
