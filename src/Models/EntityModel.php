@@ -513,7 +513,7 @@ class EntityModel extends KusikusiModel
    * @param  string $tags The id of the Entity
    * @return \Illuminate\Database\Eloquent\Builder
    */
-  public function scopeWithMedia($query, $tags = NULL)
+  /*public function scopeWithMedia($query, $tags = NULL)
   {
     $tags = params_as_array(func_get_args(), 1);
     $query->withRelations(function($query) use ($tags) {
@@ -529,7 +529,7 @@ class EntityModel extends KusikusiModel
           ->withContents('title');
     });
     return $query;
-  }
+  }*/
 
   /**
    * Scope a query to order by a content field.
@@ -691,7 +691,12 @@ class EntityModel extends KusikusiModel
    */
   public function media()
   {
-    return $this->relations()->where('kind', '=', 'medium')->orderBy('position', 'asc')->withContents('title')->with('medium');
+    return $this->relations()
+        ->select('id', 'model')
+        ->where('kind', '=', 'medium')
+        ->orderBy('position', 'asc')
+        ->withContents('title')
+        ->with('medium');
   }
 
   /**

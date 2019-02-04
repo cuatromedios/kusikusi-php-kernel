@@ -6,6 +6,8 @@
  * Time: 8:41 AM
  */
 
+use Cuatromedios\Kusikusi\Models\EntityModel;
+
 if (!function_exists('params_as_array')) {
   function params_as_array($params, $startingFrom = 0)
   {
@@ -28,6 +30,7 @@ if (!function_exists('params_as_array')) {
     $queryOrder = $request->input('order', $request->input('sort',$request->input('orderby', null)));
     $queryTake = $request->input('take', null);
     $querySkip = $request->input('skip', null);
+    $queryMedia = $request->input('media', null);
 
     $select = [
         "entities" => ['entities.id'],
@@ -120,6 +123,13 @@ if (!function_exists('params_as_array')) {
     }
     if ($querySkip) {
       $query->skip($querySkip);
+    }
+    if ($queryMedia) {
+      if ($queryMedia == 'all') {
+        $query->with('media');
+      } else {
+        $query->with(['media' => EntityModel::onlyTags(...(explode(',',$queryMedia)))]);
+      }
     }
     return $query;
   }
