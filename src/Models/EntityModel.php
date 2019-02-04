@@ -951,10 +951,10 @@ class EntityModel extends KusikusiModel
 
     self::updating(function ($entity) {
 
-      /*if (isset($entity['contents'])) {
+      if (isset($entity['contents'])) {
         $entity->addContents($entity['contents']);
         unset($entity['contents']);
-      }*/
+      }
 
       // Set data in the correspondent table
       if (isset($entity['data'])) {
