@@ -374,19 +374,9 @@ class EntityController extends Controller
         $lang = $request->input('lang', Config::get('general.langs')[0]);
         $query = Entity::select();
         $query = process_querystring($query, $request);
-        //TODO: Select attached data fields
-        $entity = $query->withRelations(function($relation) use ($kind) {
-          if ($kind == NULL) {
-            $relation->where('kind', '<>', 'ancestor');
-          } else {
-            $relation->whereKind($kind);
-          }
-        })->find($id);
-        if ($entity != NULL) {
-          $entity->find($id)->compact();
-        }
+        $entities = $query->relatedBy($id, $kind)->get()->compact();
         Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getRelations', '{}');
-        return (new ApiResponse($entity['relations'], TRUE))->response();
+        return (new ApiResponse($entities, TRUE))->response();
       } else {
         Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'getRelations', json_encode(["error" => ApiResponse::TEXT_FORBIDDEN]));
         return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
