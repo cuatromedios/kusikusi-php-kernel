@@ -768,7 +768,7 @@ class EntityModel extends KusikusiModel
       } else {
         $this->relations()->attach($id, $data);
       }
-      self::updateRelationVersion($this->id, $id);
+      self::updateRelationVersion($this->id);
       return ['id' => $id];
     }
   }
@@ -779,7 +779,7 @@ class EntityModel extends KusikusiModel
   public function deleteRelation($kind, $called_id)
   {
     $where = ['caller_id' => $this->id, 'called_id' => $called_id, 'kind' => $kind];
-    self::updateRelationVersion($this->id, $called_id);
+    self::updateRelationVersion($this->id);
     Relation::where($where)->delete();
   }
 
@@ -839,29 +839,21 @@ class EntityModel extends KusikusiModel
    * @param $caller
    * @param $called
    */
-  private static function updateRelationVersion($caller, $called)
+  private static function updateRelationVersion($caller_id)
   {
-    // Update the tree and full version of the called entity (and it's ancestors)
-    $relateds = Entity::where('id', $called)->withInverseRelations()->get()->compact();
-    if (!empty($related)) {
-      if (count($relateds[0]['inverse_relations']) > 0) {
-        foreach ($relateds[0]['inverse_relations'] as $related) {
-          $ancestors = Entity::select()->ancestorOf($related['id'])->get();
-          if (!empty($ancestors)) {
-            foreach ($ancestors as $ancestor) {
-              DB::table('entities')
-                  ->where('id', $ancestor['id'])
-                  ->increment('tree_version');
-              DB::table('entities')
-                  ->where('id', $ancestor['id'])
-                  ->increment('full_version');
-            }
-          }
-        }
-        // Now update the relation_version of the caller entity
-        DB::table('entities')->whereIn('id', $relateds[0]['inverse_relations'])
-            ->where('id', $caller)
-            ->increment('relations_version');
+    // Updates the version of the own entity and its full version as well
+    DB::table('entities')
+        ->where('id', $caller)
+        ->increment('relations_version');
+    DB::table('entities')
+        ->where('id', $caller)
+        ->increment('full_version');
+    $ancestors = Entity::select()->ancestorOf($caller)->get();
+    if (!empty($ancestors)) {
+      foreach ($ancestors as $ancestor) {
+        DB::table('entities')
+            ->where('id', $ancestor['id'])
+            ->increment('full_version');
       }
     }
   }
