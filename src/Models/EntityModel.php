@@ -843,12 +843,12 @@ class EntityModel extends KusikusiModel
   {
     // Updates the version of the own entity and its full version as well
     DB::table('entities')
-        ->where('id', $caller)
+        ->where('id', $caller_id)
         ->increment('relations_version');
     DB::table('entities')
-        ->where('id', $caller)
+        ->where('id', $caller_id)
         ->increment('full_version');
-    $ancestors = Entity::select()->ancestorOf($caller)->get();
+    $ancestors = Entity::select()->ancestorOf($caller_id)->get();
     if (!empty($ancestors)) {
       foreach ($ancestors as $ancestor) {
         DB::table('entities')
