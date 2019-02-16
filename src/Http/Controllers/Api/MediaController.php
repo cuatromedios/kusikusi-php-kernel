@@ -117,7 +117,7 @@ class MediaController extends Controller
         } catch (\Exception $e) {
             $exceptionDetails = ExceptionDetails::filter($e);
             Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, FALSE, 'post', json_encode(["body" => $data, "error" => $exceptionDetails['info']]));
-            return (new ApiResponse(NULL, FALSE, $exceptionDetails['info'], $exceptionDetails['info']['code']))->response();
+            return (new ApiResponse(NULL, FALSE, $exceptionDetails, $exceptionDetails['code']))->response();
         }
     }
 
