@@ -410,6 +410,27 @@ class EntityModel extends KusikusiModel
   }
 
   /**
+   * Scope a query to only get entities calling.
+   *
+   * @param  \Illuminate\Database\Eloquent\Builder $query
+   * @param  string $entity_id The id of the entity calling the relations
+   * @param  string $kind Filter by type of relation, if ommited all relations but 'ancestor' will be included
+   * @return \Illuminate\Database\Eloquent\Builder
+   */
+  public function scopeRelating($query, $entity_id, $kind = null)
+  {
+    $query->join('relations as i_rel_by', function ($join) use ($entity_id, $kind) {
+      $join->on('i_rel_by.caller_id', '=', 'entities.id')
+          ->where('i_rel_by.called_id', '=', $entity_id);
+      if ($kind === null) {
+        $join->where('i_rel_by.kind', '!=', 'ancestor');
+      } else {
+        $join->where('i_rel_by.kind', '=', $kind);
+      }
+    })->addSelect('i_rel_by.kind', 'i_rel_by.position', 'i_rel_by.depth', 'i_rel_by.tags');
+  }
+
+  /**
    * Scope a query to only get entities being called by another of type medium.
    *
    * @param  \Illuminate\Database\Eloquent\Builder $query

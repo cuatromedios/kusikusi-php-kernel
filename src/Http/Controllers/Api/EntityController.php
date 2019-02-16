@@ -391,29 +391,21 @@ class EntityController extends Controller
   /**
    * Display entity's inverse relations.
    *
-   * @param $id
+   * @param $id String the ID of the entity
+   * @param $kind String Kind of relation, for example medium, join, like...
+   * @param $request \Illuminate\Http\Request
    * @return \Illuminate\Http\Response
    */
-  public function getInverseRelations($id, $kind = NULL, Request $request)
+  public function getInverseRelations($id, $kind = NULL, Request $request = NULL)
   {
     try {
       if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getInverseRelations', "{}"])) {
         $lang = $request->input('lang', Config::get('general.langs')[0]);
         $query = Entity::select();
         $query = process_querystring($query, $request);
-        //TODO: Select attached data fields
-        $entity = $query->withInverseRelations(function($relation) use ($kind) {
-          if ($kind == NULL) {
-            $relation->where('kind', '<>', 'ancestor');
-          } else {
-            $relation->whereKind($kind);
-          }
-        })->find($id);
-        if ($entity != NULL) {
-          $entity->find($id)->compact();
-        }
+        $entities = $query->relating($id, $kind)->get()->compact();
         Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getInverseRelations', '{}');
-        return (new ApiResponse($entity['inverse_relations'], TRUE))->response();
+        return (new ApiResponse($entities, TRUE))->response();
       } else {
         Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'getInverseRelations', json_encode(["error" => ApiResponse::TEXT_FORBIDDEN]));
         return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
