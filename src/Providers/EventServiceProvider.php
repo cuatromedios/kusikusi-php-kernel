@@ -1,9 +1,13 @@
 <?php
-
 namespace Cuatromedios\Kusikusi\Providers;
 
 use Laravel\Lumen\Providers\EventServiceProvider as ServiceProvider;
 
+/**
+ * Class EventServiceProvider
+ *
+ * @package Cuatromedios\Kusikusi\Providers
+ */
 class EventServiceProvider extends ServiceProvider
 {
     /**
