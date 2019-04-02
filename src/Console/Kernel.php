@@ -2,6 +2,7 @@
 
 namespace Cuatromedios\Kusikusi\Console;
 
+use Cuatromedios\Kusikusi\Console\Commands\PostInstall;
 use Illuminate\Console\Scheduling\Schedule;
 use Laravel\Lumen\Console\Kernel as ConsoleKernel;
 
@@ -13,7 +14,7 @@ class Kernel extends ConsoleKernel
      * @var array
      */
     protected $commands = [
-        //
+        PostInstall::class
     ];
 
     /**
