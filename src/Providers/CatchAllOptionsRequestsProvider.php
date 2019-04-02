@@ -1,6 +1,5 @@
 <?php
-
-namespace  Cuatromedios\Kusikusi\Providers;
+namespace Cuatromedios\Kusikusi\Providers;
 
 use Illuminate\Support\ServiceProvider;
 
@@ -9,13 +8,18 @@ use Illuminate\Support\ServiceProvider;
  * we will register a handler for the requested route
  * https://gist.github.com/danharper/06d2386f0b826b669552
  */
-class CatchAllOptionsRequestsProvider extends ServiceProvider {
+class CatchAllOptionsRequestsProvider extends ServiceProvider
+{
+    /**
+     *
+     */
     public function register()
     {
         $request = app('request');
-        if ($request->isMethod('OPTIONS'))
-        {
-            app()->options($request->path(), function() { return response('', 200); });
+        if ($request->isMethod('OPTIONS')) {
+            app()->options($request->path(), function () {
+                return response('', 200);
+            });
         }
     }
 }

@@ -1,11 +1,15 @@
 <?php
-
 namespace Cuatromedios\Kusikusi\Http\Middleware;
 
 use Closure;
-use Illuminate\Contracts\Auth\Factory as Auth;
 use Cuatromedios\Kusikusi\Models\Http\ApiResponse;
+use Illuminate\Contracts\Auth\Factory as Auth;
 
+/**
+ * Class Authenticate
+ *
+ * @package Cuatromedios\Kusikusi\Http\Middleware
+ */
 class Authenticate
 {
     /**
@@ -18,7 +22,8 @@ class Authenticate
     /**
      * Create a new middleware instance.
      *
-     * @param  \Illuminate\Contracts\Auth\Factory  $auth
+     * @param  \Illuminate\Contracts\Auth\Factory $auth
+     *
      * @return void
      */
     public function __construct(Auth $auth)
@@ -29,15 +34,17 @@ class Authenticate
     /**
      * Handle an incoming request.
      *
-     * @param  \Illuminate\Http\Request  $request
-     * @param  \Closure  $next
-     * @param  string|null  $guard
+     * @param  \Illuminate\Http\Request $request
+     * @param  \Closure $next
+     * @param  string|null $guard
+     *
      * @return mixed
      */
     public function handle($request, Closure $next, $guard = null)
     {
         if ($this->auth->guard($guard)->guest()) {
-            $response = new ApiResponse(NULL, NULL, ApiResponse::TEXT_UNAUTHORIZED, ApiResponse::STATUS_UNAUTHORIZED);
+            $response = new ApiResponse(null, null, ApiResponse::TEXT_UNAUTHORIZED, ApiResponse::STATUS_UNAUTHORIZED);
+
             return ($response)->response();
         }
 

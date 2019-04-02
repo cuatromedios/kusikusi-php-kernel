@@ -1,24 +1,36 @@
 <?php
-
 namespace Cuatromedios\Kusikusi\Models;
 
-use App\Models\Entity;
-
+/**
+ * Class DataModel
+ *
+ * @package Cuatromedios\Kusikusi\Models
+ */
 class DataModel extends KusikusiModel
 {
 
-  public $modelId = 'nomodel';
+    /**
+     * @var string
+     */
+    public $modelId = 'nomodel';
 
-  public function __construct(array $newAttributes = array(), $lang = NULL)
-  {
-    parent::__construct($newAttributes, $lang);
-  }
+    /**
+     * DataModel constructor.
+     *
+     * @param array $newAttributes
+     * @param null $lang
+     */
+    public function __construct(array $newAttributes = [], $lang = null)
+    {
+        parent::__construct($newAttributes, $lang);
+    }
 
-  /**
-   * Set the relation to an Entity.
-   */
-  public function entity() {
-    return $this->belongsTo('App\Models\Entity', 'id');
-  }
+    /**
+     * Set the relation to an Entity.
+     */
+    public function entity()
+    {
+        return $this->belongsTo('App\Models\Entity', 'id');
+    }
 
 }

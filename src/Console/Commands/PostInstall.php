@@ -9,6 +9,13 @@
 
 use Illuminate\Console\Command;
 
+/**
+ * Class PostInstall
+ *
+ * Script for set configuration
+ *
+ * @package Cuatromedios\Kusikusi\Console\Commands
+ */
 class PostInstall extends Command
 {
     /**
@@ -70,6 +77,7 @@ INI;
         $this->info('Enviromen write: '
             . (file_put_contents(base_path('.env'), $envFile) ? 'success' : 'fail'));
         if ($this->confirm('Do seed?')) {
-            Artisan::call('migrate --seed');}
+            Artisan::call('migrate --seed');
         }
     }
+}
