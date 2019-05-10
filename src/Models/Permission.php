@@ -40,11 +40,19 @@ class Permission extends Model
   public $timestamps = false;
 
   /**
-   * Get the EntityBase that owns the content.
+   * Get the User that owns the content.
    */
   public function user()
   {
     return $this->belongsTo('App\Models\User', 'id');
+  }
+
+  /**
+   * Get the Entity that owns the content.
+   */
+  public function entity()
+  {
+    return $this->belongsTo('Cuatromedios\Kusikusi\Models\EntityModel', 'entity_id');
   }
 
   /**

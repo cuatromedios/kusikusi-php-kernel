@@ -913,6 +913,32 @@ class EntityModel extends KusikusiModel
     }
   }
 
+  /**
+   * Calculates the ancestor distance of the entity to another in the three: 0 if the same, positive number if a descendant, negative if ancestor or false if no relation.
+   *
+   * @return boolean
+   */
+  public function getDistanceTo($possible_ancestor_id)
+  {
+    if ($this->id === $possible_ancestor_id) {
+      return 0;
+    } else {
+      $ancestors = Entity::select('entities.id', 'depth')->ancestorOf($this->id)->get();
+      foreach ($ancestors as $ancestor) {
+        if ($ancestor->id === $possible_ancestor_id) {
+          return (int) $ancestor->depth;
+        }
+      }
+      $ancestors = Entity::select('entities.id', 'depth')->ancestorOf($possible_ancestor_id)->get();
+      foreach ($ancestors as $ancestor) {
+        if ($ancestor->id === $this->id) {
+          return (int) ($ancestor->depth * -1);
+        }
+      }
+      return false;
+    }
+  }
+
 
 
   /**
