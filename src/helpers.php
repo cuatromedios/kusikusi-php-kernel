@@ -49,14 +49,14 @@ if (!function_exists('params_as_array')) {
       $select[$fieldParts['table']][] = $fieldParts['field'];
     }
 
-    if (count($select['entities']) > 0 && $select['entities'][0] != '*') {
+    if (count($select['entities']) > 0 && $select['entities'][0] !== '*') {
       $query->select($select['entities']);
     } else {
       $query->select('entities.*');
     }
-    if (count($select['contents']) > 0 && $select['contents'][0] != '*') {
+    if (count($select['contents']) > 0 && $select['contents'][0] !== '*') {
       $query->withContents($select['contents']);
-    } else if (isset($select['contents'][0]) && $select['contents'][0] != '*') {
+    } else if (isset($select['contents'][0]) && $select['contents'][0] === '*') {
       $query->withContents();
     }
     if (isset($select['trees']) && count($select['trees']) > 0 && $select['trees'][0] != '*') {
