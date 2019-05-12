@@ -59,6 +59,10 @@ if (!function_exists('params_as_array')) {
     } else if (isset($select['contents'][0]) && $select['contents'][0] === '*') {
       $query->withContents();
     }
+    if (isset($select['data']) && count($select['data']) > 0 && isset($params['entity_id'])) {
+      $entity = \App\Models\Entity::select('id', 'model')->findOrFail($params['entity_id']);
+      $select[str_plural($entity->model)] = $select['data'];
+    }
     if (isset($select['trees']) && count($select['trees']) > 0 && $select['trees'][0] != '*') {
       $treealias = $params['treealias'] ?? 'rel_tree_des';
       $query->addSelect(array_map(function ($f) use ($treealias) { return "{$treealias}.{$f}"; }, $select['trees']));
@@ -66,6 +70,7 @@ if (!function_exists('params_as_array')) {
     unset($select['entities']);
     unset($select['contents']);
     unset($select['trees']);
+    unset($select['data']);
     foreach (array_keys($select) as $relationName) {
       $relationName = str_singular($relationName);
       $tableName = str_plural($relationName);
@@ -147,6 +152,9 @@ if (!function_exists('params_as_array')) {
     }
     if ($fieldParts[0] == "t" || $fieldParts[0] == "tree") {
       $fieldParts[0] = "trees";
+    }
+    if ($fieldParts[0] == "d" || $fieldParts[0] == "data") {
+      $fieldParts[0] = "data";
     }
     if (!isset($select[$fieldParts[0]])) {
       $select[str_plural($fieldParts[0])] = [];
