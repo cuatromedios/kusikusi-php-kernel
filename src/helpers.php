@@ -59,9 +59,12 @@ if (!function_exists('params_as_array')) {
     } else if (isset($select['contents'][0]) && $select['contents'][0] === '*') {
       $query->withContents();
     }
+    $temporal_entity = new \App\Models\Entity();
     if (isset($select['data']) && count($select['data']) > 0 && isset($params['entity_id'])) {
       $entity = \App\Models\Entity::select('id', 'model')->findOrFail($params['entity_id']);
-      $select[str_plural($entity->model)] = $select['data'];
+      if (method_exists($temporal_entity, str_singular($entity->model))) {
+        $select[str_plural($entity->model)] = $select['data'];
+      }
     }
     if (isset($select['trees']) && count($select['trees']) > 0 && $select['trees'][0] != '*') {
       $treealias = $params['treealias'] ?? 'rel_tree_des';
