@@ -86,6 +86,37 @@ class EntityController extends Controller
       return (new ApiResponse(NULL, FALSE, $exceptionDetails, $exceptionDetails['code']))->response();
     }
   }
+  /**
+   * Return an object the specified entity, with raw contents (all languages), its relations, its children and its ancestors.
+   *
+   * @param $id
+   * @return \Illuminate\Http\Response
+   */
+  public function getOneForEdit($id, Request $request)
+  {
+    try {
+      if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getOneForEdit', "{}"])) {
+        $temporal_entity = \App\Models\Entity::select('id', 'model')->findOrFail($id);
+        $query = Entity::select()->withContents();
+        if (method_exists($temporal_entity, str_singular($temporal_entity->model))) {
+          $query->with(str_singular($temporal_entity->model));
+        }
+        $entity = $query->find($id);
+        $relations = Entity::select()->relatedBy($id)->get()->compact();
+        $ancestors = Entity::select()->ancestorOf($id)->get()->compact();
+        $children = Entity::select()->childOf($id)->get()->compact();
+        Activity::add(Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getOneForEdit', '{}');
+        return (new ApiResponse(["entity" => $entity, "relations" => $relations, "ancestors" => $ancestors, "children" => $children], TRUE))->response();
+      } else {
+        Activity::add(Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, FALSE, 'getOne', json_encode(["error" => ApiResponse::TEXT_FORBIDDEN]));
+        return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
+      }
+    } catch (\Throwable $e) {
+      $exceptionDetails = ExceptionDetails::filter($e);
+      Activity::add(Auth::user()['id'], '', AuthServiceProvider::READ_ENTITY, FALSE, 'getOne', json_encode(["error" => $exceptionDetails]));
+      return (new ApiResponse(NULL, FALSE, $exceptionDetails, $exceptionDetails['code']))->response();
+    }
+  }
 
   /**
    * Create the specified entity.
