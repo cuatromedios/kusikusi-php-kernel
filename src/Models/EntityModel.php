@@ -111,15 +111,19 @@ class EntityModel extends KusikusiModel
   {
     $lang = $lang ?? $this->_lang ?? Config::get('cms.langs')[0] ?? '';
     foreach ($contents as $key=>$value) {
-      EntityContent::updateOrCreate(
-          [
-              "id" => "{$this->id}_{$lang}_{$key}"
-          ], [
-          "entity_id" => $this->id,
-          "field" => $key,
-          "value" => $value,
-          "lang" => $lang
-      ]);
+        if (gettype($value) === 'array') {
+            $this->addContents($value, $key);
+        } else {
+            EntityContent::updateOrCreate(
+                [
+                    "id" => "{$this->id}_{$lang}_{$key}"
+                ], [
+                "entity_id" => $this->id,
+                "field" => $key,
+                "value" => $value,
+                "lang" => $lang
+            ]);
+        }
     }
   }
 
