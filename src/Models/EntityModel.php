@@ -486,23 +486,27 @@ class EntityModel extends KusikusiModel
    */
   public function scopeWithContents($query)
   {
-    $content_fields = params_as_array(func_get_args(), 1);
-    if (count($content_fields) == 0) {
-      $query->with('contents');
-    } else {
-      $query->with(['contents' => function($query) use ($content_fields) {
-        $first = true;
-        foreach ($content_fields as $field) {
-          if ($first) {
-            $query->where('field', '=', $field);
-            $first = false;
-          } else {
-            $query->orWhere('field', '=', $field);
-          }
+    $args = func_get_args();
+    $content_fields = $args[1];
+    $lang = $args[2] ?? null;
+    $query->with(['contents' => function($query) use ($content_fields, $lang) {
+        if ($lang) {
+            $query->where('lang', $lang);
         }
-      }]);
-    }
-
+        if ($content_fields && count($content_fields) > 0) {
+            $query->where(function ($q) use ($content_fields)  {
+                $first = true;
+                foreach ($content_fields as $field) {
+                    if ($first) {
+                        $q->where('field', '=', $field);
+                        $first = false;
+                    } else {
+                        $q->orWhere('field', '=', $field);
+                    }
+                }
+            });
+        }
+    }]);
     return $query;
   }
 

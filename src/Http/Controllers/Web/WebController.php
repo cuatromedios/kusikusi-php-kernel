@@ -45,6 +45,7 @@ class WebController extends Controller
     if (!$search_result) {
       return ('404 not found');
     }
+    $request->request->add(['lang' => $search_result->lang]);
     $entity = Entity::findOrFail($search_result->entity_id);
     if (!$entity->isPublished()) {
       return ('Temporary not available');

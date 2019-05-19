@@ -6,9 +6,10 @@
  * Time: 8:41 AM
  */
 
+
+use Illuminate\Support\Facades\Config;
 use Cuatromedios\Kusikusi\Models\EntityModel;
 
-if (!function_exists('params_as_array')) {
   function params_as_array($params, $startingFrom = 0)
   {
     $totalFields = count($params);
@@ -23,8 +24,17 @@ if (!function_exists('params_as_array')) {
     }
   }
 
+  function always_array($param) {
+      if (!gettype($param)==='array') {
+          return [$param];
+      } else {
+          return $param;
+      }
+  }
+
   function process_querystring(\Illuminate\Database\Eloquent\Builder $query, \Illuminate\Http\Request $request, $params = null)
   {
+    $lang = $request->input('lang', Config::get('general.langs')[0]);
     $querySelect = $request->input('select', $request->input('fields', 'entities.*,contents.*'));
     $queryWhere = $request->input('filters', $request->input('filter', $request->input('where', null)));
     $queryOrder = $request->input('order', $request->input('sort',$request->input('orderby', null)));
@@ -55,9 +65,9 @@ if (!function_exists('params_as_array')) {
       $query->select('entities.*');
     }
     if (count($select['contents']) > 0 && $select['contents'][0] !== '*') {
-      $query->withContents($select['contents']);
+      $query->withContents($select['contents'], $lang);
     } else if (isset($select['contents'][0]) && $select['contents'][0] === '*') {
-      $query->withContents();
+      $query->withContents(null, $lang);
     }
     $temporal_entity = new \App\Models\Entity();
     if (isset($select['data']) && count($select['data']) > 0 && isset($params['entity_id'])) {
@@ -171,4 +181,3 @@ if (!function_exists('params_as_array')) {
       "relation" => str_singular($fieldParts[0])
     ];
   }
-}

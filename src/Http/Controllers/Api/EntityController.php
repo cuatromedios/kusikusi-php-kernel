@@ -66,7 +66,6 @@ class EntityController extends Controller
   {
     try {
       if (Gate::allows(AuthServiceProvider::READ_ENTITY, [$id, 'getOne', "{}"])) {
-        $lang = $request->input('lang', Config::get('general.langs')[0]);
         $query = Entity::select();
         $query = process_querystring($query, $request, ['entity_id' => $id]);
         //TODO: Select attached data fields
