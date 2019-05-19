@@ -487,7 +487,7 @@ class EntityModel extends KusikusiModel
   public function scopeWithContents($query)
   {
     $args = func_get_args();
-    $content_fields = $args[1];
+    $content_fields = $args[1] ?? null;
     $lang = $args[2] ?? null;
     $query->with(['contents' => function($query) use ($content_fields, $lang) {
         if ($lang) {
