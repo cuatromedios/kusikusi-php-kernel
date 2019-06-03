@@ -964,6 +964,9 @@ class EntityModel extends KusikusiModel
       if (!isset($entity['model'])) {
         throw new \Exception('A model id is requiered to create a new entity', ApiResponse::STATUS_BADREQUEST);
       }
+      if (!isset($entity['name'])) {
+          $entity['name'] = $entity['contents']['title'] ?? $entity['contents'][Config::get('cms.langs')[0]]['title'] ?? Config::get("cms.models.{$entity['model']}.name") ?? strtoupper($entity['model']);
+      }
       if (isset($entity['contents'])) {
         $entity->addContents($entity['contents']);
         unset($entity['contents']);
@@ -1001,6 +1004,10 @@ class EntityModel extends KusikusiModel
       if (isset($entity['contents'])) {
         $entity->addContents($entity['contents']);
         unset($entity['contents']);
+      }
+
+      if (!isset($entity['name']) && (isset($entity['contents']['title']) || isset($entity['contents'][Config::get('cms.langs')[0]]['title']))) {
+        $entity['name'] = $entity['contents']['title'] ?? $entity['contents'][Config::get('cms.langs')[0]]['title'];
       }
 
       // Set data in the correspondent table
