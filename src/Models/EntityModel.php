@@ -52,7 +52,7 @@ class EntityModel extends KusikusiModel
    * @var array
    */
   protected $guarded = [
-      'created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by', 'publicated_at', 'unpublicated_at', 'entity_version', 'tree_version', 'relations_version', 'full_version'
+      'created_at', 'updated_at', 'deleted_at', 'created_by', 'updated_by', 'entity_version', 'tree_version', 'relations_version', 'full_version'
   ];
 
   protected $hidden = ['caller_id', 'called_id'];
