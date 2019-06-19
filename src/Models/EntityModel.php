@@ -450,7 +450,7 @@ class EntityModel extends KusikusiModel
     })
         ->addSelect('id', 'model', 'rel_media.kind', 'rel_media.position', 'rel_media.depth', 'rel_media.tags')
         ->orderBy('position')
-        ->withContents('title')
+        ->withContents()
         ->with('medium');
   }
 
@@ -724,7 +724,7 @@ class EntityModel extends KusikusiModel
         ->select('id', 'model')
         ->where('kind', '=', 'medium')
         ->orderBy('position', 'asc')
-        ->withContents('title')
+        ->withContents()
         ->with('medium');
   }
 
