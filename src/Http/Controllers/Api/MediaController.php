@@ -8,14 +8,11 @@ use Cuatromedios\Kusikusi\Models\Http\ApiResponse;
 use App\Models\Entity;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
-use Intervention\Image\Facades\Image;
-use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Cuatromedios\Kusikusi\Providers\AuthServiceProvider;
 use Cuatromedios\Kusikusi\Models\Activity;
-use Illuminate\Support\Facades\Validator;
-use Exception;
+use Illuminate\Support\Facades\Auth;
 
 class MediaController extends Controller
 {
@@ -47,9 +44,9 @@ class MediaController extends Controller
                 if (!isset($information['model'])) {
                     $information['model'] = 'medium';
                 }
-                $entityPosted = new Entity($body);
+                $entityPosted = new Entity($information);
                 $entityPosted->save();
-                Activity::add(\Auth::user()['id'], $entityPosted['id'], AuthServiceProvider::WRITE_ENTITY, TRUE, 'post', json_encode(["body" => $body]));
+                Activity::add(\Auth::user()['id'], $entityPosted['id'], AuthServiceProvider::WRITE_ENTITY, TRUE, 'post', json_encode(["body" => $information]));
                 return (new ApiResponse($entityPosted, TRUE))->response();
             } else {
                 Activity::add(\Auth::user()['id'], '', AuthServiceProvider::WRITE_ENTITY, FALSE, 'post', json_encode(["body" => $body, "error" => ApiResponse::TEXT_FORBIDDEN]));
