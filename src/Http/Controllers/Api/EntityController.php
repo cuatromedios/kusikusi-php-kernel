@@ -101,7 +101,7 @@ class EntityController extends Controller
           $query->with(str_singular($temporal_entity->model));
         }
         $entity = $query->find($id);
-        $relations = Entity::select()->relatedBy($id)->get()->compact();
+        $relations = Entity::select()->relatedBy($id)->withContents(['title'])->with('medium')->get()->compact();
         $ancestors = Entity::select()->ancestorOf($id)->get()->compact();
         $children = Entity::select()->childOf($id)->get()->compact();
         Activity::add(Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getOneForEdit', '{}');
