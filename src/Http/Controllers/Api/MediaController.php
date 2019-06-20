@@ -49,7 +49,7 @@ class MediaController extends Controller
                 Activity::add(\Auth::user()['id'], $entityPosted['id'], AuthServiceProvider::WRITE_ENTITY, TRUE, 'post', json_encode(["body" => $information]));
                 return (new ApiResponse($entityPosted, TRUE))->response();
             } else {
-                Activity::add(\Auth::user()['id'], '', AuthServiceProvider::WRITE_ENTITY, FALSE, 'post', json_encode(["body" => $body, "error" => ApiResponse::TEXT_FORBIDDEN]));
+                Activity::add(\Auth::user()['id'], '', AuthServiceProvider::WRITE_ENTITY, FALSE, 'post', json_encode(["body" => $information, "error" => ApiResponse::TEXT_FORBIDDEN]));
                 return (new ApiResponse(NULL, FALSE, ApiResponse::TEXT_FORBIDDEN, ApiResponse::STATUS_FORBIDDEN))->response();
             }
         } catch (\Throwable $e) {
