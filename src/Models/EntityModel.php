@@ -1001,7 +1001,7 @@ class EntityModel extends KusikusiModel
 
     self::updating(function ($entity) {
 
-      if (isset($entity['contents'])) {
+      if (isset($entity->toArray()['contents'])) {
         $entity->addContents($entity['contents']);
         unset($entity['contents']);
       }
