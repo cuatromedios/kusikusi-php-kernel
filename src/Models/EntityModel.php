@@ -67,6 +67,11 @@ class EntityModel extends KusikusiModel
   ];
 
   /**
+   * Append some getters or mutators fields
+   */
+  protected $appends = ['published'];
+
+  /**
    * The model should use soft deletes.
    *
    * @var array
