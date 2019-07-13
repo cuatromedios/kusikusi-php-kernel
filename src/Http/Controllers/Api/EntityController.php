@@ -131,7 +131,7 @@ class EntityController extends Controller
               "parent_id" => "required|string",
               "model" => "required|string"
               ], Config::get('validator.messages'));
-            $body = $request->json()->all();
+            $body = $request->except('published', 'id', 'created_at', 'updated_at');
             $entityPosted = new Entity($body);
             $entityPosted->save();
             Activity::add(\Auth::user()['id'], $entityPosted['id'], AuthServiceProvider::WRITE_ENTITY, TRUE, 'post', json_encode(["body" => $body]));
@@ -158,7 +158,7 @@ class EntityController extends Controller
     try {
       if (Gate::allows(AuthServiceProvider::WRITE_ENTITY, [$id]) === true) {
         // TODO: Filter the json to delete all not used data
-        $body = $request->json()->all();
+        $body = $request->except('published', 'id', 'created_at', 'updated_at');
         $entityPatched = Entity::find($id)->update($body);
         Activity::add(\Auth::user()['id'], $id, AuthServiceProvider::WRITE_ENTITY, TRUE, 'patch', json_encode(["body" => $body]));
         return (new ApiResponse($entityPatched, TRUE))->response();
