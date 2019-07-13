@@ -103,7 +103,7 @@ class EntityController extends Controller
         $entity = $query->find($id);
         $relations = Entity::select()->relatedBy($id)->withContents(['title'])->with('medium')->get()->compact();
         $ancestors = Entity::select()->ancestorOf($id)->get()->compact();
-        $children = Entity::select()->childOf($id)->withContents(['title', 'url'])->get()->compact();
+        $children = Entity::select()->childOf($id)->withContents(['title', 'url'])->orderBy('position')->get()->compact();
         Activity::add(Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getOneForEdit', '{}');
         return (new ApiResponse(["entity" => $entity, "relations" => $relations, "ancestors" => $ancestors, "children" => $children], TRUE))->response();
       } else {
