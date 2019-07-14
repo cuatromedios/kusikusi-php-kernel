@@ -101,8 +101,8 @@ class EntityController extends Controller
           $query->with(str_singular($temporal_entity->model));
         }
         $entity = $query->find($id);
-        $relations = Entity::select()->relatedBy($id)->withContents(['title'])->with('medium')->get()->compact();
-        $ancestors = Entity::select()->ancestorOf($id)->get()->compact();
+        $relations = Entity::select()->relatedBy($id)->withContents(['title', 'url'])->with('medium')->get()->compact();
+        $ancestors = Entity::select()->ancestorOf($id)->withContents(['title', 'url'])->get()->compact();
         $children = Entity::select()->childOf($id)->withContents(['title', 'url'])->orderBy('position')->get()->compact();
         Activity::add(Auth::user()['id'], $id, AuthServiceProvider::READ_ENTITY, TRUE, 'getOneForEdit', '{}');
         return (new ApiResponse(["entity" => $entity, "relations" => $relations, "ancestors" => $ancestors, "children" => $children], TRUE))->response();
