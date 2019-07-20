@@ -972,6 +972,9 @@ class EntityModel extends KusikusiModel
       if (!isset($entity['name'])) {
           $entity['name'] = $entity['contents']['title'] ?? $entity['contents'][Config::get('cms.langs')[0]]['title'] ?? Config::get("cms.models.{$entity['model']}.name") ?? strtoupper($entity['model']);
       }
+      if (!isset($entity['publicated_at'])) {
+          $entity['publicated_at'] = Carbon::now();
+      }
       if (isset($entity['contents'])) {
         $entity->addContents($entity['contents']);
         unset($entity['contents']);
