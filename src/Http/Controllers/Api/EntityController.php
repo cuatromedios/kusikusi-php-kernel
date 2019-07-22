@@ -131,7 +131,7 @@ class EntityController extends Controller
               "parent_id" => "required|string",
               "model" => "required|string"
               ], Config::get('validator.messages'));
-            $body = $request->except('published', 'id', 'created_at', 'updated_at');
+            $body = $request->except('published', 'created_at', 'updated_at');
             $entityPosted = new Entity($body);
             $entityPosted->save();
             Activity::add(\Auth::user()['id'], $entityPosted['id'], AuthServiceProvider::WRITE_ENTITY, TRUE, 'post', json_encode(["body" => $body]));
