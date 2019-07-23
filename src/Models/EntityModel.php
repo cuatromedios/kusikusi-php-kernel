@@ -282,7 +282,7 @@ class EntityModel extends KusikusiModel
   public function getPublishedAttribute()
   {
     $currentDate = Carbon::now();
-    if ($this->active === true && $this->publicated_at <= $currentDate && $this->unpublicated_at > $currentDate && $this->deleted_at === NULL) {
+    if ($this->active === true && $this->published_at <= $currentDate && $this->unpublished_at > $currentDate && $this->deleted_at === NULL) {
       return true;
     }
     return false;
@@ -315,7 +315,7 @@ class EntityModel extends KusikusiModel
    */
   public function scopeIsPublished($query)
   {
-    return $query->where('active', true)->whereDate('publicated_at', '<=', Carbon::now())->whereDate('unpublicated_at', '>', Carbon::now())->where('deleted_at');
+    return $query->where('active', true)->whereDate('published_at', '<=', Carbon::now())->whereDate('unpublished_at', '>', Carbon::now())->where('deleted_at');
   }
 
   /**
@@ -972,8 +972,8 @@ class EntityModel extends KusikusiModel
       if (!isset($entity['name'])) {
           $entity['name'] = $entity['contents']['title'] ?? $entity['contents'][Config::get('cms.langs')[0]]['title'] ?? Config::get("cms.models.{$entity['model']}.name") ?? strtoupper($entity['model']);
       }
-      if (!isset($entity['publicated_at'])) {
-          $entity['publicated_at'] = Carbon::now();
+      if (!isset($entity['published_at'])) {
+          $entity['published_at'] = Carbon::now();
       }
       if (isset($entity['contents'])) {
         $entity->addContents($entity['contents']);
