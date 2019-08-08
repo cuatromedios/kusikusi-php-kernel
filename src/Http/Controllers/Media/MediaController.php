@@ -32,7 +32,7 @@ class MediaController extends Controller
    *
    * @param $id
    * @param $preset
-   * @return Image
+   * @return Response
    */
   public function get($id, $preset, $friendly = NULL)
   {
@@ -57,7 +57,10 @@ class MediaController extends Controller
       $cachedImage = Storage::disk('media_processed')->get($publicFilePath);
       return new Response(
           $cachedImage,  200,
-          ['Content-Type' => Storage::disk('media_processed')->getMimeType($publicFilePath)]
+          [
+              'Content-Type' => Storage::disk('media_processed')->getMimeType($publicFilePath),
+              'Content-Length' => Storage::disk('media_processed')->size($publicFilePath)
+          ]
       );
     }
     if (!$exists = Storage::disk('media_original')->exists($originalFilePath)) {
@@ -68,7 +71,10 @@ class MediaController extends Controller
     if (array_search($entity['medium']['format'], ['jpg', 'png', 'gif']) === FALSE) {
       return new Response(
           $filedata,  200,
-          ['Content-Type' => Storage::disk('media_original')->getMimeType($originalFilePath)]
+          [
+              'Content-Type' => Storage::disk('media_original')->getMimeType($originalFilePath),
+              'Content-Length' => Storage::disk('media_original')->size($originalFilePath)
+          ]
       );
     }
 
@@ -111,7 +117,10 @@ class MediaController extends Controller
     $cachedImage = Storage::disk('media_processed')->get($publicFilePath);
     return new Response(
         $cachedImage,  200,
-        ['Content-Type' => Storage::disk('media_processed')->getMimeType($publicFilePath)]
+        [
+            'Content-Type' => Storage::disk('media_processed')->getMimeType($publicFilePath),
+            'Content-Length' => Storage::disk('media_processed')->size($publicFilePath)
+        ]
     );
   }
 }
